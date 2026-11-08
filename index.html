@@ -30,7 +30,6 @@ button.on{background:color-mix(in srgb,var(--accent) 18%,transparent);border-col
 #msg{color:var(--accent);font-size:.88rem}
 .map{background:var(--sea);border:1px solid var(--border);border-radius:14px;overflow:visible;position:relative}
 .map.pl{cursor:crosshair;outline:3px solid var(--accent)}
-svg{display:block;width:100%;height:auto;border-radius:13px}
 .land{fill:var(--land);stroke:var(--landline);stroke-width:1.5}
 .sea{fill:var(--muted);font-size:12px;font-style:italic;opacity:.75}
 .route{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-dasharray:6 5;opacity:.8}
@@ -89,7 +88,6 @@ a.btn{text-decoration:none;color:var(--fg)}
 .rdr .vb{position:absolute;top:6px;bottom:6px;background:var(--accent);border-radius:3px}
 .rdr .ax{position:relative;height:14px;margin-left:128px;font-size:.68rem;color:var(--muted)}
 .rdr .ax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
-svg{cursor:grab;touch-action:pan-y pinch-zoom}.zoomed svg{touch-action:none}
 .land,.route{vector-effect:non-scaling-stroke}
 .zm{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:6}
 .zm button{width:34px;height:34px;padding:0;border-radius:8px;background:var(--card);line-height:1}
@@ -108,11 +106,12 @@ html{scroll-behavior:smooth}
 #mapcol{position:sticky;top:8px}#main{min-width:0}
 @media(max-width:900px){.layout{display:block}
 #mapcol{position:sticky;top:0;z-index:15;margin:0 -16px 8px;padding:0 16px 6px;background:var(--bg)}
-#mapcol .map svg{max-height:38vh}#mapcol .hint{display:none}.tabs{position:static}}
+#mapcol .hint{display:none}.tabs{position:static}}
 .zm a{width:34px;height:34px;padding:0;border-radius:8px;background:var(--card);display:grid;place-items:center;text-decoration:none;color:var(--fg)}
 .rl{font-size:12px;fill:var(--muted);paint-order:stroke;stroke:var(--sea);stroke-width:3px;pointer-events:none}
 #dm{position:absolute;left:8px;right:56px;bottom:8px;z-index:6;display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.8rem}
 #dm a{color:var(--accent);margin-right:6px}
+#lmap .leaflet-overlay-pane svg{width:auto;height:auto;max-width:none;max-height:none;border-radius:0}
 #lmap{height:560px;border-radius:13px;position:relative;z-index:0;background:var(--sea);font:inherit}
 .map.pl .leaflet-container{cursor:crosshair}
 .lp-wrap,.rl-wrap{background:none;border:0}
