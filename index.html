@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Japan Reiseplaner</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#c4452d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Japan">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f7f5f0;--fg:#1f2a2e;--muted:#5d6b70;--card:#fff;--border:#ddd8cc;--sea:#d7e8ee;--land:#efe6cf;--landline:#c9bc98;--accent:#c4452d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a1d;--fg:#e8ecee;--muted:#98a6ab;--card:#1d262a;--border:#2f3b40;--sea:#1b2e38;--land:#2c3a35;--landline:#455850;--accent:#ff7a5c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a1d;--fg:#e8ecee;--muted:#98a6ab;--card:#1d262a;--border:#2f3b40;--sea:#1b2e38;--land:#2c3a35;--landline:#455850;--accent:#ff7a5c;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 28px}
+.ttl{font:inherit;font-size:1.5rem;font-weight:700;width:100%;border:0;border-bottom:2px dashed var(--border);background:transparent;color:var(--fg);padding:2px 0}
+.sub{color:var(--muted);margin:6px 0 10px;font-size:.92rem}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+button,.btn{font:inherit;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:99px;padding:5px 13px;display:inline-block}
+button:hover,.btn:hover{border-color:var(--accent)}
+button.on{background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent)}
+#msg{color:var(--accent);font-size:.88rem}
+.map{background:var(--sea);border:1px solid var(--border);border-radius:14px;overflow:visible;position:relative}
+.map.pl{cursor:crosshair;outline:3px solid var(--accent)}
+svg{display:block;width:100%;height:auto;border-radius:13px}
+.land{fill:var(--land);stroke:var(--landline);stroke-width:1.5}
+.sea{fill:var(--muted);font-size:12px;font-style:italic;opacity:.75}
+.route{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-dasharray:6 5;opacity:.8}
+.pin{cursor:pointer}
+.pin circle{fill:var(--card);stroke:var(--accent);stroke-width:3}
+.pin.act circle{fill:var(--accent);stroke:var(--fg)}
+.pin .num{font-size:15px;font-weight:700;text-anchor:middle;dominant-baseline:central;fill:var(--fg);pointer-events:none}
+.pin.act .num{fill:#fff}
+.lbl{font-size:16px;font-weight:600;fill:var(--fg);paint-order:stroke;stroke:var(--sea);stroke-width:3px;pointer-events:none}
+.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;padding-top:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:8px}
+label{display:block;font-size:.78rem;color:var(--muted)}
+input,textarea{font:inherit;width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg)}
+textarea{min-height:120px;resize:vertical}
+.imgs{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.th{position:relative}
+.th img{width:96px;height:96px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block}
+.th b{position:absolute;top:2px;right:2px;background:#000a;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;cursor:pointer}
+.row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer}
+.row.act{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.nm{flex:1;font-weight:600}.d{color:var(--muted);font-size:.85rem;white-space:nowrap}
+.n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:.85rem;display:grid;place-items:center}
+.tot{padding:10px 6px 0;font-weight:700}
+.hint{color:var(--muted);font-size:.82rem}
+#ov{position:fixed;inset:0;background:#000d;display:none;place-items:center;z-index:9}
+#ov img{max-width:94%;max-height:90%;border-radius:8px}
+details{margin:8px 0}summary{cursor:pointer;font-weight:600;padding:6px 0}
+.g{margin:8px 0}.gh{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.it{display:flex;gap:6px;align-items:center;margin:4px 0}.it .t{flex:1;min-width:0}.it .a{width:92px;flex:none;text-align:right}
+.x{cursor:pointer;color:var(--muted);padding:0 6px}.ad{font-size:.8rem;padding:2px 10px}
+#gt{margin-top:10px;border-top:1px solid var(--border)}
+.ic{white-space:nowrap;font-size:.95rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.chips button{padding:3px 10px;font-size:.85rem}
+a.btn{text-decoration:none;color:var(--fg)}
+#db{margin:0 0 12px}.desc{margin:0 0 10px;color:var(--muted);font-size:.92rem}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.kp div{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+.kp div.big{border-color:var(--accent)}.kp b{display:block;font-size:1.1rem}.kp span{color:var(--muted);font-size:.78rem}
+.tl{display:flex;gap:2px;margin:12px 0 6px;border-radius:8px;overflow:hidden}
+.sg{min-width:0;color:#fff;font-size:.72rem;padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;opacity:.82}
+.sg.act{opacity:1;outline:2px solid var(--fg);outline-offset:-2px}
+.cb{display:flex;height:10px;border-radius:99px;overflow:hidden;margin:4px 0 2px}.cb i{display:block}
+#fans{position:absolute;inset:0;pointer-events:none;z-index:5}
+.fan{position:absolute;width:0;height:0}
+.fan .hit{position:absolute;left:8px;top:-34px;width:46px;height:22px;border-radius:99px;pointer-events:auto;cursor:pointer}
+.fan .fb{position:absolute;left:10px;top:-32px;font-size:.72rem;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:99px;padding:0 6px;white-space:nowrap;pointer-events:none;transition:opacity .2s}
+.fan.open .fb,.fan.auto .fb{opacity:0}
+.fan .fi{position:absolute;left:-44px;bottom:6px;width:88px;height:66px;object-fit:cover;border:3px solid #fff;border-radius:6px;box-shadow:0 4px 12px #0006;transform-origin:50% 100%;transform:rotate(0) translateY(0) scale(.2);opacity:0;pointer-events:none;transition:transform .45s cubic-bezier(.2,.9,.3,1.25),opacity .25s;transition-delay:calc(var(--k)*45ms)}
+.fan.open .fi,.fan.auto .fi{transform:rotate(var(--r)) translateY(-58px) scale(1);opacity:1;pointer-events:auto;cursor:zoom-in}
+.rdr{margin:6px 0}.rdr .rw{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:.78rem}
+.rdr .lb{width:120px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdr .tr{position:relative;flex:1;height:18px;background:var(--bg);border-radius:4px}
+.rdr .bb{position:absolute;top:0;bottom:0;background:hsla(335,70%,72%,.65);border-radius:4px}
+.rdr .vb{position:absolute;top:6px;bottom:6px;background:var(--accent);border-radius:3px}
+.rdr .ax{position:relative;height:14px;margin-left:128px;font-size:.68rem;color:var(--muted)}
+.rdr .ax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+svg{cursor:grab;touch-action:pan-y pinch-zoom}.zoomed svg{touch-action:none}
+.land,.route{vector-effect:non-scaling-stroke}
+.zm{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:4px;z-index:6}
+.zm button{width:34px;height:34px;padding:0;border-radius:8px;background:var(--card);line-height:1}
+#tip{position:absolute;display:none;z-index:7;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.8rem;max-width:240px;transform:translate(-50%,-125%);box-shadow:0 4px 14px #0004}
+select{font:inherit;padding:5px 6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg)}
+.pr{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:5px 0}.pr .ps{width:auto;flex:none}.pr .pn,.pr .pt{flex:2 1 140px;width:auto}
+.pr.dn .pn{text-decoration:line-through;opacity:.6}.pk{display:flex;align-items:center;gap:2px;font-size:.8rem;color:var(--muted)}.pk input{width:auto}
+.pm{padding:2px 8px;text-decoration:none}.pb{pointer-events:none}
+html{scroll-behavior:smooth}
+.tabs{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:6px;background:var(--bg);padding:8px 0;margin:6px 0 10px;border-bottom:1px solid var(--border)}
+.tabs button{white-space:nowrap}
+.pane{display:none}.pane.on{display:block}.pane>.card{margin-bottom:12px}
+#qs{margin:12px 0}#qs .bar{margin:8px 0 0}
+#dsel{width:100%;margin-bottom:10px;font-weight:600}
+.layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+#mapcol{position:sticky;top:8px}#main{min-width:0}
+@media(max-width:900px){.layout{display:block}
+#mapcol{position:sticky;top:0;z-index:15;margin:0 -16px 8px;padding:0 16px 6px;background:var(--bg)}
+#mapcol .map svg{max-height:38vh}#mapcol .hint{display:none}.tabs{position:static}}
+.zm a{width:34px;height:34px;padding:0;border-radius:8px;background:var(--card);display:grid;place-items:center;text-decoration:none;color:var(--fg)}
+.rl{font-size:12px;fill:var(--muted);paint-order:stroke;stroke:var(--sea);stroke-width:3px;pointer-events:none}
+#dm{position:absolute;left:8px;right:56px;bottom:8px;z-index:6;display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.8rem}
+#dm a{color:var(--accent);margin-right:6px}
+#lmap{height:560px;border-radius:13px;position:relative;z-index:0;background:var(--sea);font:inherit}
+.map.pl .leaflet-container{cursor:crosshair}
+.lp-wrap,.rl-wrap{background:none;border:0}
+.lp{width:30px;height:30px;border-radius:50%;background:var(--card);border:3px solid var(--accent);display:grid;place-items:center;font:700 14px system-ui,sans-serif;color:var(--fg);box-shadow:0 2px 6px #0005;box-sizing:border-box}
+.lp.act{background:var(--accent);color:#fff;border-color:#1f2a2e}
+.lbl2{position:absolute;left:34px;top:5px;white-space:nowrap;font:600 13px system-ui,sans-serif;color:#1f2a2e;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none}
+.pbd{position:absolute;left:-14px;top:33px;white-space:nowrap;font-size:13px;background:#fffd;border-radius:99px;padding:0 4px;pointer-events:none}
+.rl2{display:inline-block;transform:translate(-50%,-50%);white-space:nowrap;font:600 11.5px system-ui,sans-serif;background:#fffe;color:#333;border-radius:99px;padding:1px 7px;box-shadow:0 1px 4px #0004;pointer-events:none}
+@media(max-width:900px){#mapcol #lmap{height:38vh}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<input class="ttl" id="title" aria-label="Titel der Reise">
+<p class="sub">Die Karte bleibt in jedem Reiter sichtbar. Pin antippen wählt das Ziel, der gewählte Pin lässt sich ziehen. Alles ist änderbar und wird nur auf diesem Gerät gespeichert.</p>
+<div class="bar" id="rg"></div><div class="card" id="db"><p class="desc" id="rw"></p><div class="kp" id="kp"></div><div class="tl" id="tl"></div><div class="hint" id="cb2"></div><div class="hint" id="sy"></div><div class="hint" id="fo"></div><div class="hint" id="spt"></div></div><div class="card" id="sk" style="margin:0 0 12px"></div><div class="bar">
+<button id="add">+ Neues Ziel</button><button id="plc">📍 Auf Karte setzen</button><button id="cp">Plan als Text kopieren</button><button id="rs">Zurücksetzen</button><span id="msg"></span>
+</div>
+<div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
+<div class="grid"><div class="card" id="ed"></div><div class="card"><div id="list"></div><div id="gt"></div></div></div>
+<p class="hint">Karte: © OpenStreetMap-Mitwirkende, Satellit: Esri. Der Pin des gewählten Ziels lässt sich ziehen. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
+</div>
+<div id="ov"><img alt=""></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var KEY='reiseplaner-v3',NS='http://www.w3.org/2000/svg';
+var GR=[['U','🛏️ Unterkunft'],['E','🍜 Essen'],['A','🎟️ Aktivitäten'],['R','🚌 Anreise vor Ort'],['S','➕ Sonstiges']];
+var TGS=[['N','🌿','Natur'],['E','🍜','Essen'],['S','🏙️','Stadt'],['B','🏖️','Strand'],['K','🛕','Kultur'],['R','😌','Entspannung']];
+var FOOD={
+'Fukuoka':'Hakata-Ramen (Schweineknochen-Brühe)\nMotsunabe (Innereien-Eintopf)\nYatai-Streetfood am Fluss',
+'Nagasaki':'Champon (Nudelsuppe mit Meeresfrüchten)\nSara Udon\nCastella (Biskuitkuchen)',
+'Kumamoto & Aso':'Kumamoto-Ramen mit Knoblauchöl\nKarashi Renkon (Lotuswurzel mit Senf)\nTaipien (Glasnudelsuppe)',
+'Kagoshima & Sakurajima':'Kurobuta (Schwarzschwein)\nSatsuma-Age (frittierter Fischkuchen)\nShirokuma (Eisdessert)',
+'Hiroshima & Miyajima':'Hiroshima-Okonomiyaki\nGegrillte Austern von Miyajima\nAnago-Meshi (Aal auf Reis)\nMomiji Manju',
+'Osaka':'Takoyaki (Oktopus-Bällchen)\nOkonomiyaki\nKushikatsu (frittierte Spieße)',
+'Osaka & Nara':'Takoyaki (Oktopus-Bällchen)\nOkonomiyaki\nKakinoha-Zushi (Sushi in Blättern, Nara)',
+'Kyoto':'Kaiseki\nYudofu (Tofu im Heißtopf)\nMatcha-Süßigkeiten\nStreetfood am Nishiki-Markt',
+'Hakone':'Kaiseki-Menü im Ryokan\nKuro-Tamago (schwarze Onsen-Eier)\nSoba-Nudeln',
+'Tokio':'Sushi (Toyosu-Markt)\nRamen\nTonkatsu (paniertes Schnitzel)\nMonjayaki',
+'Kanazawa':'Kaisendon (Seafood-Reisschale)\nJibuni (Kanazawa-Eintopf)\nSoftgelato mit Blattgold',
+'Kawaguchiko & Fuji':'Houtou (Miso-Nudeleintopf mit Kürbis)\nYoshida-Udon (feste Nudeln)\nFuji-Forelle',
+'Matsumoto':'Soba-Nudeln\nOyaki (gefüllte Teigtaschen)\nWasabi-Spezialitäten',
+'Takayama & Shirakawa-go':'Hida-Rind\nTakayama-Ramen\nMitarashi Dango (Reisklößchen)'};
+var SPOT={
+'Tokio':'Sumida Park\nUeno Park\nShinjuku Gyoen (bis Ende April, 500 Yen)\nMeguro-Fluss (abends beleuchtet)\nYoyogi Park\nInokashira Park',
+'Kyoto':'Arashiyama\nPhilosophenpfad\nKiyomizudera (abends beleuchtet)\nNinnaji (Spätblüte)',
+'Osaka':'Burg Osaka Park (über 4.000 Bäume)\nBurg Himeji (Tagesausflug)\nNara Park (Tagesausflug)',
+'Osaka & Nara':'Burg Osaka Park\nNara Park\nBerg Yoshino (bis Mitte April, ca. 2 Std. entfernt)',
+'Hiroshima & Miyajima':'Burg Hiroshima\nMiyajima',
+'Fukuoka':'Burgruine Fukuoka (Maizuru Park)\nUminonakamichi Seaside Park',
+'Kagoshima & Sakurajima':'Yoshino Park\nSakurajima Dinosaur Park',
+'Matsumoto':'Burg Matsumoto (über 200 Kirschbäume)',
+'Kawaguchiko & Fuji':'Nordufer des Kawaguchi-Sees mit Fuji (Mitte April)'};
+var SAK={'Fukuoka':['03-15','03-30'],'Nagasaki':['03-18','03-31'],'Kumamoto & Aso':['03-18','03-31'],'Kagoshima & Sakurajima':['03-15','03-30'],'Hiroshima & Miyajima':['03-15','03-31'],'Osaka':['03-24','04-06'],'Osaka & Nara':['03-24','04-06'],'Kyoto':['03-25','04-06'],'Hakone':['03-30','04-12'],'Kawaguchiko & Fuji':['04-08','04-20'],'Matsumoto':['04-01','04-15'],'Takayama & Shirakawa-go':['04-10','04-22'],'Kanazawa':['03-30','04-10'],'Tokio':['03-22','04-05']};
+var ST={
+'Fukuoka':[33.59,130.4,'Yatai-Streetfood am Fluss, Ohori Park, Burgruine Maizuru mit Kirschbäumen.','ES',110,42,30,180],
+'Nagasaki':[32.75,129.88,'Friedenspark, Glover Garden, Hafenblick vom Inasa-Berg.','KSE',105,40,40,60],
+'Kumamoto & Aso':[32.8,130.71,'Burg Kumamoto, Aso-Vulkan, Onsen-Dörfer.','NKR',100,40,70,70],
+'Kagoshima & Sakurajima':[31.6,130.56,'Aktiver Vulkan Sakurajima per Fähre, Sand-Onsen in Ibusuki.','NRE',100,40,40,70],
+'Hiroshima & Miyajima':[34.39,132.46,'Friedensmuseum, schwimmendes Torii, Okonomiyaki.','KNE',115,42,50,70],
+'Osaka':[34.69,135.5,'Streetfood in Dotonbori, Burg Osaka, Tagesausflug nach Himeji oder Nara.','ESK',110,45,60,40],
+'Osaka & Nara':[34.69,135.5,'Dotonbori, Burg Osaka, Hirsche im Nara Park, Tempel Todaiji.','ESK',110,45,60,40],
+'Kyoto':[35.01,135.77,'Philosophenpfad, Arashiyama, Fushimi Inari, Teezeremonie.','KER',130,45,80,30],
+'Hakone':[35.23,139.02,'Onsen-Ryokan, Blick auf den Fuji, Seilbahn.','NRE',170,55,60,80],
+'Tokio':[35.68,139.76,'Sushi, Ramen, Shinjuku Gyoen, Meguro-Fluss, Asakusa.','SEK',125,45,100,60],
+'Kanazawa':[36.56,136.66,'Kenroku-en-Garten, Samurai-Viertel, Seafood am Omicho-Markt.','KSE',110,42,40,70],
+'Kawaguchiko & Fuji':[35.5,138.77,'Fuji-Blick vom See, Onsen, Wanderung am Chureito-Pagodenhügel.','NR',120,40,60,70],
+'Matsumoto':[36.24,137.97,'Burg Matsumoto, Soba, Tor zu den Japanischen Alpen.','KN',105,38,50,40],
+'Takayama & Shirakawa-go':[36.14,137.25,'Altstadt Takayama, Strohdachhäuser in Shirakawa-go.','KN',115,40,80,60]};
+var PRE={
+v1:{t:'Japan: Der Blüte folgen',fl:1100,w:'Ihr reist mit der Blüte: Sie startet im Südwesten und zieht nach Nordosten. So erwischt ihr Fukuoka und Hiroshima früh, Kyoto und Osaka Ende März und Tokio zum Schluss. Einreise z. B. über Tokio mit Inlandsflug nach Fukuoka (ca. 2 Std.), Rückflug ab Tokio.',s:[['Fukuoka',2],['Hiroshima & Miyajima',3],['Osaka',3],['Kyoto',5],['Hakone',2],['Tokio',6]]},
+v2:{t:'Japan: Klassiker Ost → West',fl:1100,w:'Der Klassiker von Ost nach West. Im März seid ihr in Tokio früh dran, die Blüte holt euch erst später ein. Das passt besser bei Reisestart Ende März oder Anfang April (Reisestart im Kirschblüten-Check ändern). Rückflug ab Osaka.',s:[['Tokio',5],['Hakone',2],['Kanazawa',2],['Kyoto',6],['Hiroshima & Miyajima',3],['Osaka',3]]},
+v3:{t:'Japan: Natur & Berge',fl:1100,w:'Fuji-Region, Japanische Alpen, Takayama und Shirakawa-go, dazu Kyoto und Nara. Die Blüte kommt in den Bergen später (Matsumoto Anfang April, Fuji Mitte April), im März ist es dort oft noch kühl. Rückflug ab Osaka.',s:[['Tokio',4],['Kawaguchiko & Fuji',2],['Matsumoto',2],['Takayama & Shirakawa-go',3],['Kanazawa',2],['Kyoto',5],['Osaka & Nara',3]]},
+v4:{t:'Japan: Genuss & Onsen',fl:1100,w:'Kulinarik, Onsen und Entspannung: Ryokan in Hakone, Seafood in Kanazawa, Kaiseki in Kyoto, Streetfood in Osaka. Zum Schluss Hiroshima mit Miyajima, dann Rückflug ab Osaka.',s:[['Tokio',4],['Hakone',3],['Kanazawa',3],['Kyoto',5],['Osaka',4],['Hiroshima & Miyajima',2]]},
+v5:{t:'Japan: Süden & Kyushu',fl:1100,w:'Kyushu hat die früheste Blüte (Mitte bis Ende März), dazu Vulkane, Onsen und Seafood. Danach weiter nach Hiroshima, Osaka und Kyoto. Einreise z. B. über Tokio mit Inlandsflug nach Fukuoka, Rückflug ab Osaka.',s:[['Fukuoka',3],['Nagasaki',2],['Kumamoto & Aso',3],['Kagoshima & Sakurajima',3],['Hiroshima & Miyajima',3],['Osaka',3],['Kyoto',4]]}};
+function mk(r){var P=PRE[r];return {title:P.t,fl:P.fl,bf:10,start:'2027-03-14',shift:0,stops:P.s.map(function(x,i){var a=ST[x[0]],n=x[1];return {id:'s'+i,n:x[0],c:'Japan',d:n,lat:a[0],lon:a[1],note:a[2],tg:a[3],food:FOOD[x[0]]||'',sp:SPOT[x[0]]||'',pl:[],imgs:[],items:[{g:'U',t:'Doppelzimmer, '+n+' Nächte à '+a[4]+' €',a:n*a[4]},{g:'E',t:n+' Tage × 2 Personen à '+a[5]+' €',a:n*2*a[5]},{g:'A',t:'Aktivitäten und Eintritte',a:a[6]},{g:'R',t:'Anreise vor Ort (Zug, Flug, Transfer)',a:a[7]}]}})}}
+function dflt(){return mk(RG)}
+function load(){try{var s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return dflt()}
+var RG='v1';try{RG=localStorage.getItem('japan2-rg')||'v1'}catch(e){}
+function key(r){return 'japan-v2-'+r}
+KEY=key(RG);
+var S=load(),sel=0,placing=false,tm,rt;
+function mig(){if(S.start==null)S.start='2027-03-14';if(S.shift==null)S.shift=0;S.stops.forEach(function(s){if(s.tg==null)s.tg='';if(s.food==null)s.food=FOOD[s.n]||'';if(s.sp==null)s.sp=SPOT[s.n]||'';if(s.pl==null)s.pl=[]})}mig();
+function $(i){return document.getElementById(i)}
+function esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function msg(t){$('msg').textContent=t;clearTimeout(rt);rt=setTimeout(function(){$('msg').textContent=''},4000)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){msg('Speicher voll: bitte weniger oder kleinere Bilder verwenden.')}}
+function saveSoon(){clearTimeout(tm);tm=setTimeout(save,300)}
+var MAP=null,LAYER=null,GPS=null;
+function ll(s){return [s.lat,s.lon]}
+function inMap(){return true}
+function ctr(){if(MAP){var c=MAP.getCenter();return [Math.round(c.lat*1e5)/1e5,Math.round(c.lng*1e5)/1e5]}return [36,138]}
+function initMap(){
+if(typeof L==='undefined'){$('lmap').innerHTML='<p class="hint" style="padding:16px">Die Kartenbibliothek konnte nicht geladen werden (keine Internetverbindung?). Zielliste, Kosten und Planer funktionieren trotzdem.</p>';return}
+MAP=L.map('lmap',{zoomControl:false,worldCopyJump:true}).setView([36,138],5);
+var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(MAP);
+var sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Esri'});
+L.control.layers({'Karte':osm,'Satellit':sat},null,{position:'topleft'}).addTo(MAP);
+L.control.scale({imperial:false}).addTo(MAP);
+LAYER=L.layerGroup().addTo(MAP);
+MAP.on('move zoom',function(){drawFans();hideTip()});
+MAP.on('zoomend',function(){drawMap()});
+MAP.on('moveend',setGm);
+MAP.on('click',function(e){if(!placing||!S.stops[sel])return;var s=S.stops[sel];s.lat=Math.round(e.latlng.lat*1e5)/1e5;s.lon=Math.round(e.latlng.lng*1e5)/1e5;setPl(false);save();all()});
+MAP.on('locationfound',function(e){if(GPS)GPS.remove();GPS=L.circleMarker(e.latlng,{radius:8,color:'#1c8fb5'}).addTo(MAP)});
+MAP.on('locationerror',function(){msg('Standort nicht verfügbar (Freigabe im Browser prüfen).')});
+if(window.ResizeObserver)new ResizeObserver(function(){MAP.invalidateSize()}).observe($('lmap'));
+window.addEventListener('resize',function(){MAP.invalidateSize()})}
+function pinIcon(s,i){var b='';if(MAP.getZoom()>=11&&s.pl&&s.pl.length)b='<span class="pbd">'+s.pl.slice(0,6).map(function(x){return PTI(x.ty)}).join('')+'</span>';
+return L.divIcon({className:'lp-wrap',html:'<div class="lp'+(i===sel?' act':'')+'"><b>'+(i+1)+'</b></div><span class="lbl2">'+esc(s.n)+'</span>'+b,iconSize:[30,30],iconAnchor:[15,15]})}
+function drawMap(){
+if(!MAP)return;LAYER.clearLayers();
+var v=S.stops;
+if(v.length>1)L.polyline(v.map(ll),{color:'#c4452d',weight:3,dashArray:'8 7',opacity:.85}).addTo(LAYER);
+if(MAP.getZoom()>=7)for(var li=1;li<v.length;li++){var A=v[li-1],B=v[li],dd=hav(A,B),fl=dd>500,rk=fl?dd:dd*1.3,hh=fl?dd/700+2.5:rk/SPD[RG];
+L.marker([(A.lat+B.lat)/2,(A.lon+B.lon)/2],{icon:L.divIcon({className:'rl-wrap',html:'<span class="rl2">'+(fl?'✈️ ':'')+Math.round(rk)+' km · '+ft(hh)+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(LAYER)}
+v.forEach(function(s,i){
+var m=L.marker(ll(s),{icon:pinIcon(s,i),draggable:i===sel,zIndexOffset:i===sel?1000:0,title:s.n}).addTo(LAYER);
+m.on('click',function(){pick(i)});m.on('mouseover',function(){showTip(i)});m.on('mouseout',hideTip);
+m.on('dragend',function(){var p=m.getLatLng();s.lat=Math.round(p.lat*1e5)/1e5;s.lon=Math.round(p.lng*1e5)/1e5;save();setTimeout(all,0)})});
+drawFans()}
+function drawList(){
+var f=1,t=0,c=0,h='';
+S.stops.forEach(function(s,i){var d=Math.max(1,+s.d||1);
+h+='<div class="row'+(i===sel?' act':'')+'" data-i="'+i+'"><span class="n">'+(i+1)+'</span><span class="nm">'+esc(s.n||'Ohne Namen')+'</span><span class="ic">'+icons(s)+(bl(i)?' '+bl(i).e:'')+'</span><span class="d">Tag '+f+(d>1?'–'+(f+d-1):'')+(sum(s)?' · '+Math.round(sum(s))+' €':'')+'</span></div>';
+f+=d;t+=d;c+=sum(s)});
+$('list').innerHTML=h+'<div class="tot">'+t+' Tage'+(c?' · '+Math.round(c).toLocaleString('de-AT')+' € für Ziele':'')+'</div><div class="hint" style="padding:6px">'+TGS.map(function(g){return g[1]+' '+g[2]}).join(' · ')+'</div>';
+Array.prototype.forEach.call($('list').querySelectorAll('.row'),function(r){r.onclick=function(){pick(+r.dataset.i)}});updGT();updDb();updQs()}
+function shrink(file,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',0.65))};im.src=r.result};r.readAsDataURL(file)}
+var armDel=0;
+function drawEd(){
+var s=S.stops[sel],e=$('ed');
+if(!s){e.innerHTML='<p>Noch kein Ziel. Tippe auf „+ Neues Ziel“.</p>';return}
+e.innerHTML='<div class="f"><div><label>Name</label><input id="fn" value="'+esc(s.n)+'"></div><div><label>Land / Region</label><input id="fc" value="'+esc(s.c)+'"></div><div><label>Tage</label><input id="fd" type="number" min="1" value="'+esc(s.d)+'"></div></div>'+
+''+(inMap(s)?'':'<p class="hint">Dieses Ziel liegt außerhalb der Karte. Tippe auf das 📍 in der Karte und dann auf die gewünschte Stelle.</p>')+
+'<p><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+s.lat+','+s.lon+'">📍 Ort in Google Maps</a> <a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?tbm=isch&q='+encodeURIComponent((s.n||'')+' '+(s.c||''))+'">🖼️ Bilder suchen</a> '+(sel>0?'<a class="btn" target="_blank" rel="noopener" href="'+legUrl(S.stops[sel-1],s)+'">🗺️ Route vom vorherigen Ziel</a>':'')+'</p>'+(bl(sel)?'<p class="hint">'+bl(sel).e+' '+bl(sel).t+'</p>':'')+'<label>Symbole</label><div class="chips" id="tgs"></div><details id="cd"><summary id="cs"></summary><div id="cb"></div></details><div id="plw"></div><label>🍽️ Typisches Essen (ein Gericht pro Zeile)</label><textarea id="ffood" style="min-height:84px;margin-bottom:8px">'+esc(s.food)+'</textarea><label>🌸 Kirschblüten-Spots (ein Ort pro Zeile)</label><textarea id="fsp" style="min-height:84px;margin-bottom:8px">'+esc(s.sp)+'</textarea><label style="margin-top:8px">Notizen</label><textarea id="fnote" placeholder="Hotels, Restaurants, Ideen, Buchungsnummern …">'+esc(s.note)+'</textarea>'+
+'<label style="margin-top:8px">Bilder</label><div class="imgs" id="imgs"></div><label class="btn">+ Bilder hinzufügen<input type="file" id="fi" accept="image/*" multiple hidden></label>'+
+'<div class="bar" style="margin:12px 0 0"><button id="up">↑ Früher</button><button id="dn">↓ Später</button><button id="del">Ziel löschen</button></div>';
+[['fn','n'],['fc','c'],['fd','d',1],['fnote','note'],['ffood','food'],['fsp','sp']].forEach(function(m){
+$(m[0]).oninput=function(){var v=this.value;s[m[1]]=m[2]?(m[1]=='d'?Math.max(1,+v||1):+v||0):v;drawMap();drawList();saveSoon()}});
+drawImgs();
+drawCost();drawTags();drawPl();$('fi').onchange=function(){var fs=Array.prototype.slice.call(this.files);fs.forEach(function(f){shrink(f,function(u){s.imgs.push(u);drawImgs();drawFans();save()})});this.value=''};
+$('up').onclick=function(){mv(-1)};$('dn').onclick=function(){mv(1)};
+$('del').onclick=function(){if(!armDel){armDel=1;this.textContent='Wirklich löschen?';setTimeout(function(){armDel=0;if($('del'))$('del').textContent='Ziel löschen'},3000);return}
+armDel=0;S.stops.splice(sel,1);sel=Math.max(0,sel-1);save();all()}}
+function drawImgs(){var s=S.stops[sel],b=$('imgs');b.innerHTML='';
+s.imgs.forEach(function(u,i){var d=document.createElement('div');d.className='th';var im=document.createElement('img');im.src=u;im.alt='Bild '+(i+1);im.onclick=function(){$('ov').firstChild.src=u;$('ov').style.display='grid'};
+var x=document.createElement('b');x.textContent='×';x.onclick=function(){s.imgs.splice(i,1);drawImgs();drawFans();save()};d.appendChild(im);d.appendChild(x);b.appendChild(d)})}
+var MD={v1:'transit',v2:'transit',v3:'transit',v4:'transit',v5:'transit'},SPD={v1:90,v2:90,v3:80,v4:90,v5:90};
+var RGS=[['v1','🌸 Der Blüte folgen'],['v2','🏯 Klassiker Ost → West'],['v3','⛰️ Natur & Berge'],['v4','♨️ Genuss & Onsen'],['v5','🌋 Süden & Kyushu']];
+function setBounds(){fitAll()}
+function drawRg(){var b=$('rg');b.innerHTML='';RGS.forEach(function(g){var e=document.createElement('button');e.textContent=g[1];e.className=g[0]==RG?'on':'';e.onclick=function(){if(g[0]!=RG)setRg(g[0])};b.appendChild(e)});
+$('rw').textContent=PRE[RG].w+' Beträge und Flugpreise sind grobe Schätzungen aus meinem Wissen, nicht recherchiert. Küstenlinien sind stark vereinfacht.'}
+function setRg(r){save();RG=r;try{localStorage.setItem('japan2-rg',r)}catch(e){}KEY=key(r);S=load();mig();sel=0;setBounds();$('title').value=S.title;document.title=S.title;drawRg();buildGT();all()}
+function gm(){var v=S.stops;if(v.length<2)return '';var c=function(t){return t.lat+','+t.lon};return 'https://www.google.com/maps/dir/?api=1&origin='+c(v[0])+'&destination='+c(v[v.length-1])+(v.length>2?'&waypoints='+v.slice(1,-1).slice(0,9).map(c).join('%7C'):'')+modeq()}
+function cpy(t,m){function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');msg(m)}catch(x){msg('Kopieren nicht möglich.')}document.body.removeChild(a)}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){msg(m)},fb);else fb()}
+function modeq(){var m=S.mode||MD[RG];return m&&m!='auto'?'&travelmode='+m:''}
+function legUrl(a,b){return 'https://www.google.com/maps/dir/?api=1&origin='+a.lat+','+a.lon+'&destination='+b.lat+','+b.lon+modeq()}
+function hav(a,b){var r=Math.PI/180,x=Math.sin((b.lat-a.lat)*r/2),y=Math.sin((b.lon-a.lon)*r/2),q=x*x+Math.cos(a.lat*r)*Math.cos(b.lat*r)*y*y;return 12742*Math.asin(Math.sqrt(q))}
+function ft(h){var m=Math.round(h*60);return m<60?m+' Min.':Math.floor(m/60)+' Std. '+('0'+m%60).slice(-2)+' Min.'}
+function updRt(){var b=$('rtb');if(!b)return;var v=S.stops,tk=0,th=0,rows='';
+for(var i=1;i<v.length;i++){var a=v[i-1],c=v[i],d=hav(a,c),fl=d>500,rk=fl?d:d*1.3,h=fl?d/700+2.5:rk/SPD[RG];tk+=rk;th+=h;
+rows+='<tr><td>'+i+' → '+(i+1)+': '+esc(a.n)+' → '+esc(c.n)+'</td><td>'+(fl?'✈️ ':'')+'ca. '+Math.round(rk)+' km</td><td>ca. '+ft(h)+'</td><td><a href="'+legUrl(a,c)+'" target="_blank" rel="noopener">Route öffnen</a></td></tr>'}
+b.innerHTML=v.length<2?'':'<table><thead><tr><th>Etappe</th><th>Strecke</th><th>Zeit</th><th>Google Maps</th></tr></thead><tbody>'+rows+'<tr class="sum"><td>Gesamt</td><td>ca. '+Math.round(tk)+' km</td><td>ca. '+ft(th)+'</td><td></td></tr></tbody></table><p class="hint">Schätzung: Luftlinie × 1,3 als Straßenweg bei durchschnittlich '+SPD[RG]+' km/h. Ab 500 km Luftlinie rechne ich einen Flug mit ca. 700 km/h plus 2,5 Std. für Check-in und Transfer. Genaue Strecke, Dauer und Alternativen zeigt Google Maps nach Tipp auf „Route öffnen“.</p>';
+RT={k:tk,h:th};$('rts').textContent='🧭 Reiseroute: ca. '+Math.round(tk)+' km, ca. '+ft(th)+' Reisezeit (Schätzung)';
+var m=$('rmd');m.innerHTML='';[['auto','🧭 Google wählt'],['driving','🚗 Auto'],['transit','🚆 Bahn/Bus']].forEach(function(o){var e=document.createElement('button');e.textContent=o[1];e.className=(S.mode||MD[RG])==o[0]?'on':'';e.onclick=function(){S.mode=o[0];save();updGT()};m.appendChild(e)})}
+var RT={k:0,h:0};
+function updDb(){var d=0,z=0,cat={U:0,E:0,A:0,R:0,S:0},tg={};
+S.stops.forEach(function(t){d+=Math.max(1,+t.d||1);z+=sum(t);(t.items||[]).forEach(function(x){cat[x.g]=(cat[x.g]||0)+(+x.a||0)});TGS.forEach(function(g){if((t.tg||'').indexOf(g[0])>=0)tg[g[0]]=(tg[g[0]]||0)+1})});
+var fl=2*(+S.fl||0),bf=(z+fl)*(+S.bf||0)/100,tot=z+fl+bf;
+var T=[['📅 '+d,'Tage',0],['📍 '+S.stops.length,'Ziele · '+S.stops.reduce(function(a,t){return a+(t.pl||[]).length},0)+' Tipps',0],[eur(tot),'Gesamt für 2',1],[eur(tot/2),'pro Person',1],[eur(d?tot/d:0),'pro Tag für 2',0],['🧭 '+Math.round(RT.k)+' km','ca. '+ft(RT.h)+' unterwegs',0],['✈️ '+eur(fl),'Langstreckenflug für 2',0]];
+$('kp').innerHTML=T.map(function(t){return '<div'+(t[2]?' class="big"':'')+'><b>'+t[0]+'</b><span>'+t[1]+'</span></div>'}).join('');
+$('tl').innerHTML=S.stops.map(function(t,i){var dd=Math.max(1,+t.d||1);return '<div class="sg'+(i===sel?' act':'')+'" data-i="'+i+'" style="flex:'+dd+';background:hsl('+(i*53+10)+',50%,40%)" title="'+esc(t.n)+', '+dd+' Tage"><b>'+(i+1)+'</b> '+esc(t.n)+'</div>'}).join('');
+Array.prototype.forEach.call($('tl').querySelectorAll('.sg'),function(e){e.onclick=function(){pick(+e.dataset.i)}});
+var P=[['Unterkunft',cat.U],['Essen',cat.E],['Aktivitäten',cat.A],['Anreise vor Ort',cat.R+cat.S],['Langstreckenflug',fl],['Puffer',bf]];
+$('cb2').innerHTML=tot>0?'<div class="cb">'+P.map(function(x,i){return '<i title="'+x[0]+'" style="width:'+(x[1]/tot*100)+'%;background:hsl('+(i*60+20)+',55%,48%)"></i>'}).join('')+'</div>'+P.map(function(x){return x[0]+' '+Math.round(x[1]/tot*100)+' %'}).join(' · '):'';
+$('sy').textContent='Schwerpunkte: '+(TGS.filter(function(g){return tg[g[0]]}).map(function(g){return g[1]+' '+g[2]+' ('+tg[g[0]]+')'}).join(' · ')||'noch keine Symbole gesetzt');var c=S.stops[sel];$('fo').textContent=c&&c.food?'🍽️ Typisch in '+c.n+': '+c.food.split('\n').filter(Boolean).join(' · '):'';$('spt').textContent=c&&c.sp?'🌸 Kirschblüten-Spots in '+c.n+': '+c.sp.split('\n').filter(Boolean).join(' · '):'';updBloom()}
+var fanSig='';
+function stopById(id){return S.stops.filter(function(t){return t.id===id})[0]}
+function drawFans(){var f=$('fans');if(!f)return;
+var sig=RG+'|'+S.stops.map(function(t){return t.id+':'+(t.imgs||[]).reduce(function(a,u){return a+u.length},0)}).join('|');
+if(sig!==fanSig){fanSig=sig;f.innerHTML='';
+S.stops.forEach(function(t){if(!t.imgs||!t.imgs.length)return;
+var d=document.createElement('div');d.className='fan';d.dataset.id=t.id;
+var h=document.createElement('div');h.className='hit';h.setAttribute('aria-label','Bilder von '+t.n);d.appendChild(h);
+var b=document.createElement('span');b.className='fb';b.textContent='📁 '+t.imgs.length;d.appendChild(b);
+var m=Math.min(5,t.imgs.length);
+for(var k=0;k<m;k++){(function(k){var im=new Image();im.className='fi';im.alt='Bild '+(k+1);im.src=t.imgs[k];im.style.setProperty('--r',((k-(m-1)/2)*20)+'deg');im.style.setProperty('--k',k);
+im.onclick=function(e){e.stopPropagation();$('ov').firstChild.src=t.imgs[k];$('ov').style.display='grid'};d.appendChild(im)})(k)}
+d.onmouseenter=function(){d.classList.add('open')};d.onmouseleave=function(){d.classList.remove('open')};
+h.onclick=function(e){e.stopPropagation();var i=S.stops.indexOf(stopById(t.id));if(i>=0&&i!==sel)pick(i);d.classList.toggle('open')};
+f.appendChild(d)})}
+Array.prototype.forEach.call(f.children,function(d){var t=stopById(d.dataset.id);if(!t||!MAP){d.style.display='none';return}var p=MAP.latLngToContainerPoint(ll(t)),sz=MAP.getSize();if(p.x<-40||p.x>sz.x+40||p.y<-40||p.y>sz.y+40){d.style.display='none';return}d.style.display='';d.style.left=p.x+'px';d.style.top=p.y+'px';d.classList.toggle('auto',MAP.getZoom()>=12)})}
+document.addEventListener('click',function(){Array.prototype.forEach.call(document.querySelectorAll('.fan.open'),function(d){d.classList.remove('open')})});
+function dn(y,m,d){return Date.UTC(y,m-1,d)/864e5}
+function pIso(i){var p=(i||'2027-03-14').split('-');return dn(+p[0],+p[1],+p[2])}
+function fmtD(n){var d=new Date(n*864e5);return d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'.'}
+function visit(i){var a=pIso(S.start);for(var k=0;k<i;k++)a+=Math.max(1,+S.stops[k].d||1);return [a,a+Math.max(1,+S.stops[i].d||1)-1,new Date(pIso(S.start)*864e5).getUTCFullYear()]}
+function bl(i){var s=S.stops[i],w=s&&SAK[s.n];if(!w)return null;var v=visit(i),sh=+S.shift||0,p0=w[0].split('-'),p1=w[1].split('-'),b0=dn(v[2],+p0[0],+p0[1])+sh,b1=dn(v[2],+p1[0],+p1[1])+sh,ov=Math.max(0,Math.min(v[1],b1)-Math.max(v[0],b0)+1),len=v[1]-v[0]+1,me=fmtD(v[0])+'–'+fmtD(v[1]);
+if(!ov)return v[1]<b0?{e:'⏪',k:'early',b:[b0,b1],t:'Zu früh: Die Blüte beginnt dort laut Näherung um den '+fmtD(b0)+', ihr seid am '+me+' da.'}:{e:'⏩',k:'late',b:[b0,b1],t:'Eher vorbei: Die Blüte dort endet laut Näherung um den '+fmtD(b1)+', ihr seid am '+me+' da.'};
+return ov/len>=.5?{e:'🌸',k:'ok',b:[b0,b1],t:'Passt: Blüte dort laut Näherung '+fmtD(b0)+'–'+fmtD(b1)+', ihr seid am '+me+' da.'}:{e:'🌱',k:'part',b:[b0,b1],t:'Teilweise: Blüte dort laut Näherung '+fmtD(b0)+'–'+fmtD(b1)+', ihr seid am '+me+' da.'}}
+function buildSk(){$('sk').innerHTML='<h2 style="margin:0 0 8px;font-size:1.15rem">🌸 Kirschblüten-Check</h2><div class="bar" style="margin:0 0 8px"><label style="display:flex;align-items:center;gap:6px;font-size:.85rem">Reisestart <input type="date" id="skd" style="width:auto"></label><label style="display:flex;align-items:center;gap:6px;font-size:.85rem">Blüte früher (−) oder später (+), Tage <input type="number" id="sks" step="1" style="width:76px"></label><button id="sk1">Früh wie 2026 (−7)</button><button id="sk2">Durchschnitt (0)</button><button id="sk3">Spät (+5)</button></div><div class="sub" id="skm" style="margin:0 0 8px"></div><div class="rdr" id="rdr"></div>'+
+'<details><summary>📅 Stand der Prognose und Quellen (24.10.2026)</summary><div class="hint" style="line-height:1.6"><p><b>Noch keine offizielle Prognose für 2027.</b> Die erste private Prognose erschien 2026 am 18. Dezember (Japan Meteorological Corporation). WanderWeib rechnet für 2027 mit Anfang Januar, weitere Prognosen folgen bis in den Februar und werden danach wöchentlich aktualisiert. Sobald sie da ist, trägst du oben die Verschiebung in Tagen ein.</p><p><b>Orientierung bis dahin:</b> Im Durchschnitt (JMA 1991–2020) beginnt die Blüte in Tokio um den 24.3., Vollblüte ca. 31.3.; in Kyoto und Osaka ist die Vollblüte um den 4.4. 2026 blühte es etwa eine Woche früher (Tokio erste Blüte 21.3., Osaka 24.3., Kyoto 25.3.). Reiseportale erwarten für 2027 die Hauptblüte in Tokio, Kyoto und Osaka grob zwischen 28.3. und 5.4. Das ist eine Schätzung, keine Prognose.</p><p><b>WanderWeib nach Region:</b> Hiroshima und Fukuoka Mitte März, Kagoshima Mitte/Ende März, Kyoto, Osaka, Nara und Himeji Ende März, Tokio Ende März/Anfang April, Nagano Anfang April, Fuji (Kawaguchi) Mitte April, Sendai Ende April, Aomori und Sapporo Anfang Mai.</p><p><b>Wichtig:</b> Die Zeitfenster pro Stadt im Check oben sind eine Näherung von mir aus diesen Quellen, keine amtliche Prognose. Die genaue Blüte lässt sich erst etwa eine Woche vorher sicher sagen.</p><p><a href="https://wanderweib.de/tipps-kirschblueten-kalender-vorhersage-japan/" target="_blank" rel="noopener">WanderWeib: Kirschblütenkalender</a> · <a href="https://n-kishou.com/corp/news-contents/sakura/?lang=en" target="_blank" rel="noopener">Japan Meteorological Corporation: Prognose</a></p></div></details>';
+function ch(v){S.shift=v;save();all()}
+$('skd').onchange=function(){if(this.value){S.start=this.value;save();all()}};
+$('sks').oninput=function(){S.shift=+this.value||0;saveSoon();drawList();updDb()};
+$('sk1').onclick=function(){ch(-7)};$('sk2').onclick=function(){ch(0)};$('sk3').onclick=function(){ch(5)}}
+function updBloom(){var d=$('rdr');if(!d||!S.stops.length)return;
+if($('skd')&&document.activeElement!==$('skd'))$('skd').value=S.start;
+if($('sks')&&document.activeElement!==$('sks'))$('sks').value=S.shift;
+var rows=[],lo=1e9,hi=-1e9,ok=0,tot=0;
+S.stops.forEach(function(t,i){var r=bl(i),v=visit(i);lo=Math.min(lo,v[0]);hi=Math.max(hi,v[1]);if(r){lo=Math.min(lo,r.b[0]);hi=Math.max(hi,r.b[1]);tot++;if(r.k=='ok')ok++}rows.push([t,r,v])});
+lo-=2;hi+=2;var span=hi-lo+1;function pc(x){return (x-lo)/span*100}
+var h='<div class="ax">';for(var x=lo;x<=hi;x+=7)h+='<span style="left:'+pc(x+.5)+'%">'+fmtD(x)+'</span>';h+='</div>';
+rows.forEach(function(r){h+='<div class="rw"><span class="lb">'+(r[1]?r[1].e+' ':'')+esc(r[0].n)+'</span><div class="tr">'+(r[1]?'<i class="bb" title="Blütezeit (Näherung)" style="left:'+pc(r[1].b[0])+'%;width:'+((r[1].b[1]-r[1].b[0]+1)/span*100)+'%"></i>':'')+'<i class="vb" title="Euer Aufenthalt" style="left:'+pc(r[2][0])+'%;width:'+((r[2][1]-r[2][0]+1)/span*100)+'%"></i></div></div>'});
+h+='<div class="hint" style="margin-top:4px">Rosa: Blütezeit laut Näherung · Rot: euer Aufenthalt</div>';
+d.innerHTML=h;
+var v0=visit(0),vl=visit(S.stops.length-1);
+$('skm').textContent='Reise '+fmtD(v0[0])+'–'+fmtD(vl[1])+v0[2]+': '+ok+' von '+tot+' Stationen passen zur Blüte.'+(tot&&ok<tot/2?' Tipp: Reisestart verschieben oder oben eine andere Variante wählen.':'')}
+var ptimer=null;
+function cl(v,a,b){return Math.max(a,Math.min(b,v))}
+function setGm(){var z=$('zg');if(!z||!MAP)return;var c=MAP.getCenter();z.href='https://www.google.com/maps/@'+c.lat.toFixed(4)+','+c.lng.toFixed(4)+','+MAP.getZoom()+'z'}
+function fitAll(){if(!MAP||!S.stops.length)return;MAP.invalidateSize();MAP.fitBounds(L.latLngBounds(S.stops.map(ll)),{padding:[50,50],maxZoom:9});setGm()}
+function focusStop(i,z){var t=S.stops[i];if(t&&MAP)MAP.flyTo(ll(t),z||11,{duration:.8})}
+function resetView(){fitAll()}
+function showTip(i){var t=S.stops[i],tp=$('tip');if(!t||!MAP)return;var v=visit(i),b=bl(i),f=(t.food||'').split('\n').filter(Boolean).slice(0,2).join(' · ');
+tp.innerHTML='<b>'+(i+1)+'. '+esc(t.n)+'</b><br>'+fmtD(v[0])+'–'+fmtD(v[1])+' · '+t.d+' Tage'+(sum(t)?' · '+eur(sum(t)):'')+(b?'<br>'+b.e+' '+b.t.split(':')[0]:'')+(f?'<br>🍽️ '+esc(f):'')+(t.pl&&t.pl.length?'<br>📍 '+t.pl.length+' Tipps':'');
+var p=MAP.latLngToContainerPoint(ll(t));tp.style.left=p.x+'px';tp.style.top=(p.y-12)+'px';tp.style.display='block'}
+function hideTip(){$('tip').style.display='none'}
+function stopPlay(){clearInterval(ptimer);ptimer=null;$('zp').textContent='▶'}
+$('zi').onclick=function(){stopPlay();if(MAP)MAP.zoomIn()};$('zo').onclick=function(){stopPlay();if(MAP)MAP.zoomOut()};
+$('zr').onclick=function(){stopPlay();resetView()};$('zq').onclick=function(){if(!S.stops.length)return;setPl(!placing);msg(placing?'Tippe auf die Karte, um das ausgewählte Ziel zu platzieren.':'')};$('zf').onclick=function(){stopPlay();focusStop(sel)};
+$('zl').onclick=function(){if(MAP)MAP.locate({setView:true,maxZoom:14})};
+$('zp').onclick=function(){if(ptimer){stopPlay();return}var i=0;pick(0);focusStop(0,9);$('zp').textContent='⏸';
+ptimer=setInterval(function(){i++;if(i>=S.stops.length){stopPlay();resetView();return}pick(i);focusStop(i,9)},2600)};
+var PT=[['R','🍜','Restaurant'],['C','☕','Café'],['B','🍶','Bar'],['A','🎟️','Aktivität'],['S','🏯','Sehenswürdigkeit'],['N','🌿','Natur'],['O','♨️','Onsen'],['H','🛏️','Unterkunft'],['M','🛍️','Shopping'],['X','📍','Sonstiges']];
+function PTI(c){var x=PT.filter(function(t){return t[0]==c})[0];return x?x[1]:'📍'}
+var SUG={
+'Tokio':[['R','Ichiran Ramen Shibuya'],['R','Sushi Zanmai Tsukiji'],['A','teamLab Planets'],['S','Senso-ji Tempel Asakusa'],['S','Meiji-Schrein'],['A','Shibuya Sky']],
+'Hakone':[['O','Tenzan Tohji-kyo Onsen'],['A','Hakone Ropeway'],['N','Owakudani Schwefeltal'],['S','Hakone Open-Air Museum']],
+'Kyoto':[['S','Fushimi Inari Taisha'],['S','Kinkaku-ji (Goldener Pavillon)'],['N','Arashiyama Bambushain'],['R','Nishiki-Markt'],['A','Teezeremonie in Gion'],['S','Kiyomizu-dera']],
+'Osaka':[['R','Dotonbori Takoyaki'],['S','Burg Osaka'],['R','Kuromon-Markt'],['A','Universal Studios Japan'],['S','Shinsekai']],
+'Osaka & Nara':[['S','Todai-ji Nara'],['N','Nara Park (Hirsche)'],['R','Dotonbori Takoyaki'],['S','Burg Osaka']],
+'Hiroshima & Miyajima':[['S','Friedensgedenkpark und Museum'],['S','Itsukushima-Schrein'],['R','Okonomimura Hiroshima'],['N','Mt. Misen Seilbahn']],
+'Fukuoka':[['R','Yatai am Nakasu'],['R','Ichiran Hakata Ramen'],['S','Ohori Park'],['S','Kushida-Schrein']],
+'Nagasaki':[['S','Friedenspark Nagasaki'],['S','Glover Garden'],['N','Inasa-yama Nachtblick'],['R','Champon bei Shikairo']],
+'Kumamoto & Aso':[['S','Burg Kumamoto'],['N','Aso-Vulkan Naka-dake'],['O','Kurokawa Onsen']],
+'Kagoshima & Sakurajima':[['N','Sakurajima Fähre'],['O','Sand-Onsen Ibusuki'],['S','Sengan-en Garten'],['R','Kurobuta Tonkatsu']],
+'Kanazawa':[['S','Kenroku-en'],['R','Omicho-Markt'],['S','Higashi Chaya Viertel'],['S','21st Century Museum']],
+'Kawaguchiko & Fuji':[['N','Chureito-Pagode'],['O','Onsen mit Fuji-Blick'],['R','Houtou-Nudeleintopf']],
+'Matsumoto':[['S','Burg Matsumoto'],['R','Soba in Matsumoto'],['N','Kamikochi Tagesausflug']],
+'Takayama & Shirakawa-go':[['S','Altstadt Sanmachi Suji'],['S','Shirakawa-go Aussichtspunkt Shiroyama'],['R','Hida-Rind probieren']]};
+function plUrl(t,x){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((x.n||'')+' '+t.n+' Japan')}
+function drawPl(){var t=S.stops[sel],b=$('plw');if(!b||!t)return;if(!t.pl)t.pl=[];
+b.innerHTML='<details open><summary>📍 Orte und Tipps ('+t.pl.length+')</summary><div id="plb"></div></details>';
+var opts=function(c){return PT.map(function(o){return '<option value="'+o[0]+'"'+(o[0]==c?' selected':'')+'>'+o[1]+' '+o[2]+'</option>'}).join('')};
+var h='';t.pl.forEach(function(x,i){h+='<div class="pr'+(x.ok?' dn':'')+'"><select class="ps" data-i="'+i+'">'+opts(x.ty)+'</select><input class="pn" data-i="'+i+'" placeholder="Name" value="'+esc(x.n)+'"><input class="pt" data-i="'+i+'" placeholder="Notiz (Zeit, Preis, Reservierung …)" value="'+esc(x.t||'')+'"><a class="btn pm" target="_blank" rel="noopener" href="'+plUrl(t,x)+'" title="In Google Maps öffnen">🗺️</a><label class="pk" title="Erledigt oder gebucht"><input type="checkbox" class="pc" data-i="'+i+'"'+(x.ok?' checked':'')+'> ✓</label><b class="x" data-i="'+i+'">×</b></div>'});
+h+='<div class="pr"><select id="pty">'+opts('R')+'</select><input id="pnn" placeholder="Neuer Ort, z. B. Ichiran Ramen"><button id="pad">+ Hinzufügen</button></div>';
+var sg=(SUG[t.n]||[]).filter(function(g){return !t.pl.some(function(x){return x.n==g[1]})});
+if(sg.length)h+='<div class="hint">Vorschläge zum Übernehmen:</div><div class="chips">'+sg.map(function(g,k){return '<button class="sgb" data-k="'+k+'">+ '+PTI(g[0])+' '+esc(g[1])+'</button>'}).join('')+'</div>';
+var pb=$('plb');pb.innerHTML=h;
+function ref(){save();drawPl();drawMap();drawList()}
+pb.querySelectorAll('.ps').forEach(function(e){e.onchange=function(){t.pl[+e.dataset.i].ty=e.value;save();drawMap()}});
+pb.querySelectorAll('.pn').forEach(function(e){e.oninput=function(){var x=t.pl[+e.dataset.i];x.n=e.value;e.parentNode.querySelector('.pm').href=plUrl(t,x);saveSoon()};e.onchange=function(){drawMap()}});
+pb.querySelectorAll('.pt').forEach(function(e){e.oninput=function(){t.pl[+e.dataset.i].t=e.value;saveSoon()}});
+pb.querySelectorAll('.pc').forEach(function(e){e.onchange=function(){t.pl[+e.dataset.i].ok=e.checked?1:0;ref()}});
+pb.querySelectorAll('.x').forEach(function(e){e.onclick=function(){t.pl.splice(+e.dataset.i,1);ref()}});
+function add(ty,n){if(!n)return;t.pl.push({ty:ty,n:n,t:'',ok:0});ref()}
+$('pad').onclick=function(){add($('pty').value,$('pnn').value.trim())};
+$('pnn').onkeydown=function(e){if(e.key=='Enter'){e.preventDefault();$('pad').click()}};
+pb.querySelectorAll('.sgb').forEach(function(e){e.onclick=function(){var g=sg[+e.dataset.k];add(g[0],g[1])}})}
+var TABS=[['ov','🏠 Übersicht'],['kt','📍 Ziele'],['dt','✏️ Details'],['ko','💶 Kosten'],['bl','🌸 Blüte']];
+function showTab(id){TABS.forEach(function(t){$('p-'+t[0]).className='pane'+(t[0]==id?' on':'');$('tb-'+t[0]).className=t[0]==id?'on':''});try{localStorage.setItem('japan2-tab',id)}catch(e){}drawFans()}
+function updQs(){if(!$('qs'))return;var t=S.stops[sel];if(!t){$('qs').innerHTML='';return}
+var v=visit(sel),b=bl(sel);
+$('qs').innerHTML='<b>'+(sel+1)+'. '+esc(t.n)+'</b> · '+fmtD(v[0])+'–'+fmtD(v[1])+' · '+t.d+' Tage'+(sum(t)?' · '+eur(sum(t)):'')+' · '+icons(t)+(b?' '+b.e:'')+(t.pl&&t.pl.length?' · 📍 '+t.pl.length+' Tipps':'')+'<div class="bar"><button id="qd">✏️ Details und Tipps bearbeiten</button><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+t.lat+','+t.lon+'">📍 Google Maps</a><button id="qz">🎯 Zoom</button></div>';
+$('qd').onclick=function(){showTab('dt')};$('qz').onclick=function(){focusStop(sel)};
+var d=$('dsel');if(d&&document.activeElement!==d){d.innerHTML=S.stops.map(function(x,i){return '<option value="'+i+'"'+(i==sel?' selected':'')+'>'+(i+1)+'. '+esc(x.n)+'</option>'}).join('')}}
+function buildTabs(){var P={};
+TABS.forEach(function(t){var d=document.createElement('div');d.className='pane';d.id='p-'+t[0];P[t[0]]=d});
+var gt=$('gt');P.ko.appendChild(gt);gt.querySelectorAll('details').forEach(function(d){d.open=true});
+var lc=$('list').parentNode,hint=document.querySelector('.wrap > p.hint');
+P.ov.appendChild($('db'));P.bl.appendChild($('sk'));
+P.kt.appendChild($('add').parentNode);
+var q=document.createElement('div');q.className='card';q.id='qs';P.kt.appendChild(q);P.kt.appendChild(lc);
+var ds=document.createElement('select');ds.id='dsel';ds.onchange=function(){pick(+ds.value)};P.dt.appendChild(ds);P.dt.appendChild($('ed'));
+var mc=document.createElement('div');mc.id='mapcol';mc.appendChild($('map'));if(hint)mc.appendChild(hint);
+var mn=document.createElement('div');mn.id='main';
+var tb=document.createElement('div');tb.className='tabs';tb.id='tabs';
+TABS.forEach(function(t){var b=document.createElement('button');b.id='tb-'+t[0];b.textContent=t[1];b.onclick=function(){showTab(t[0])};tb.appendChild(b)});
+mn.appendChild(tb);TABS.forEach(function(t){mn.appendChild(P[t[0]])});
+var lay=document.createElement('div');lay.className='layout';lay.appendChild(mc);lay.appendChild(mn);
+var g=document.querySelector('.grid');if(g)g.remove();$('rg').after(lay);
+var st='ov';try{st=localStorage.getItem('japan2-tab')||'ov'}catch(e){}if(!P[st])st='ov';
+updQs();showTab(st)}
+function icons(s){return TGS.filter(function(g){return (s.tg||'').indexOf(g[0])>=0}).map(function(g){return g[1]}).join('')}
+function drawTags(){var s=S.stops[sel],b=$('tgs');if(!s||!b)return;b.innerHTML='';
+TGS.forEach(function(g){var e=document.createElement('button');e.textContent=g[1]+' '+g[2];e.className=(s.tg||'').indexOf(g[0])>=0?'on':'';e.onclick=function(){var t=s.tg||'';s.tg=t.indexOf(g[0])>=0?t.replace(g[0],''):t+g[0];drawTags();drawList();save()};b.appendChild(e)})}
+function eur(v){return Math.round(v).toLocaleString('de-AT')+' €'}
+function sum(s,g){return (s.items||[]).reduce(function(t,x){return t+(!g||x.g==g?(+x.a||0):0)},0)}
+function grand(){var z=S.stops.reduce(function(t,s){return t+sum(s)},0),b=z+2*(+S.fl||0);return b*(1+(+S.bf||0)/100)}
+function updCost(){var s=S.stops[sel];if(!s||!$('cs'))return;GR.forEach(function(g){var e=$('gs'+g[0]);if(e)e.textContent=eur(sum(s,g[0]))});$('cs').textContent='💶 Kosten (Schätzung für 2): '+eur(sum(s))+' · aufklappen für Details'}
+function drawCost(){var s=S.stops[sel],b=$('cb');if(!s||!b)return;if(!s.items)s.items=[];
+b.innerHTML=GR.map(function(g){return '<div class="g"><div class="gh"><b>'+g[1]+'</b><span id="gs'+g[0]+'"></span></div>'+s.items.map(function(x,i){return x.g==g[0]?'<div class="it"><input class="t" data-i="'+i+'" value="'+esc(x.t)+'"><input class="a" type="number" min="0" data-i="'+i+'" value="'+esc(x.a)+'"><b class="x" data-i="'+i+'">×</b></div>':''}).join('')+'<button class="ad" data-g="'+g[0]+'">+ Posten</button></div>'}).join('');
+b.querySelectorAll('input.t').forEach(function(e){e.oninput=function(){s.items[+e.dataset.i].t=e.value;saveSoon()}});
+b.querySelectorAll('input.a').forEach(function(e){e.oninput=function(){s.items[+e.dataset.i].a=+e.value||0;updCost();drawList();saveSoon()}});
+b.querySelectorAll('.x').forEach(function(e){e.onclick=function(){s.items.splice(+e.dataset.i,1);drawCost();drawList();save()}});
+b.querySelectorAll('.ad').forEach(function(e){e.onclick=function(){s.items.push({g:e.dataset.g,t:'Neuer Posten',a:0});drawCost();drawList();save()}});
+updCost()}
+function buildGT(){if(S.fl==null)S.fl=900;if(S.bf==null)S.bf=10;
+$('gt').innerHTML='<details><summary id="gsum"></summary><div class="g"><div class="gh"><span>Summe aller Ziele</span><span id="g1"></span></div><div class="it"><label style="flex:1">Langstreckenflug pro Person (€), 2 Personen</label><input class="a" id="gfl" type="number" min="0" value="'+S.fl+'"></div><div class="gh"><span>Flug gesamt</span><span id="g2"></span></div><div class="it"><label style="flex:1">Puffer für Versicherung, Visa, Sonstiges (%)</label><input class="a" id="gbf" type="number" min="0" value="'+S.bf+'"></div><div class="gh"><span>Puffer</span><span id="g3"></span></div><div class="gh"><b>Gesamt für 2</b><b id="g4"></b></div><div class="gh"><span>pro Person</span><span id="g5"></span></div></div></details><div class="bar" style="margin-top:10px"><a class="btn" id="gml" target="_blank" rel="noopener">🗺️ Route in Google Maps</a><button id="gmc">Link kopieren</button></div><details style="margin-top:10px"><summary id="rts"></summary><div class="bar" id="rmd" style="margin:6px 0"></div><div class="tw" id="rtb"></div></details>';
+$('gfl').oninput=function(){S.fl=+this.value||0;updGT();saveSoon()};
+$('gbf').oninput=function(){S.bf=+this.value||0;updGT();saveSoon()};$('gmc').onclick=function(){cpy(gm(),'Google-Maps-Link kopiert.')}}
+function updGT(){if(!$('g1'))return;var z=S.stops.reduce(function(t,s){return t+sum(s)},0),f=2*(+S.fl||0),b=(z+f)*(+S.bf||0)/100,g=z+f+b;
+$('g1').textContent=eur(z);$('g2').textContent=eur(f);$('g3').textContent=eur(b);$('g4').textContent=eur(g);$('g5').textContent=eur(g/2);
+$('gsum').textContent='💶 Gesamtkosten für 2: ca. '+eur(g)+' · aufklappen';var a=$('gml');if(a)a.href=gm();updRt()}
+function mv(k){var j=sel+k;if(j<0||j>=S.stops.length)return;var t=S.stops[sel];S.stops[sel]=S.stops[j];S.stops[j]=t;sel=j;save();all()}
+function all(){drawMap();drawList();drawEd()}
+function pick(i){sel=i;all()}
+$('ov').onclick=function(){this.style.display='none'};
+$('title').value=S.title;$('title').oninput=function(){S.title=this.value;document.title=this.value||'Reiseplaner';saveSoon()};
+$('add').onclick=function(){S.stops.push({id:'s'+Date.now(),n:'Neues Ziel',c:'',d:2,items:[],lat:ctr()[0],lon:ctr()[1],note:'',imgs:[]});sel=S.stops.length-1;setPl(true);save();all();msg('Tippe jetzt auf die Karte, um das Ziel zu platzieren.')};
+function setPl(v){placing=v;$('map').className='map'+(v?' pl':'');$('plc').className=v?'on':'';if($('zq'))$('zq').className=v?'on':''}
+$('plc').onclick=function(){if(!S.stops.length)return;setPl(!placing)};
+var armRs=0;
+$('rs').onclick=function(){var b=this;if(!armRs){armRs=1;b.textContent='Wirklich alles zurücksetzen?';setTimeout(function(){armRs=0;b.textContent='Zurücksetzen'},3000);return}
+armRs=0;b.textContent='Zurücksetzen';S=dflt();sel=0;setBounds();buildGT();$('title').value=S.title;save();all()};
+$('cp').onclick=function(){var f=1,t=S.title+'\n\n';
+S.stops.forEach(function(s,i){var d=Math.max(1,+s.d||1);t+=(i+1)+'. '+s.n+(s.c?' ('+s.c+')':'')+', Tag '+f+(d>1?'–'+(f+d-1):'')+(sum(s)?', ca. '+Math.round(sum(s))+' €':'')+'\n'+(s.note?s.note+'\n':'')+(s.food?'Essen: '+s.food.split('\n').filter(Boolean).join(', ')+'\n':'')+(s.pl&&s.pl.length?'Orte: '+s.pl.map(function(x){return PTI(x.ty)+' '+x.n+(x.ok?' (erledigt)':'')}).join(', ')+'\n':'')+'\n';f+=d});
+t+='Gesamt inkl. Flug und Puffer (geschätzt, für 2): ca. '+Math.round(grand())+' €\n';function fb(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');msg('Plan kopiert. Jetzt in WhatsApp einfügen.')}catch(x){msg('Kopieren nicht möglich.')}document.body.removeChild(a)}
+if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){msg('Plan kopiert. Jetzt in WhatsApp einfügen.')},fb);else fb()};
+initMap();drawRg();buildGT();buildSk();all();buildTabs();setBounds();if(MAP)setTimeout(function(){MAP.invalidateSize();fitAll()},200);
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')==0)navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+<!-- v2 zoom detail -->
+</body>
+</html>
