@@ -114,6 +114,8 @@ html{scroll-behavior:smooth}
 #lmap .leaflet-overlay-pane svg{width:auto;height:auto;max-width:none;max-height:none;border-radius:0}
 .pp{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #1c8fb5;display:grid;place-items:center;font-size:14px;box-shadow:0 2px 5px #0005;box-sizing:border-box}
 .rl2.hl{color:#1e6fd9;border-color:#1e6fd9}
+.geo .hit button{display:inline-block;width:auto;flex:none;white-space:nowrap;margin:0}
+.geo .hit{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:4px 0;border-top:1px solid #0001}
 .pp.dn{opacity:.55;border-color:#999}
 .pl2{left:30px;top:3px;font-size:12px}
 .pr .gb{padding:2px 8px}
@@ -401,13 +403,17 @@ var SUG={
 'Takayama & Shirakawa-go':[['S','Altstadt Sanmachi Suji'],['S','Shirakawa-go Aussichtspunkt Shiroyama'],['R','Hida-Rind probieren']]};
 function plUrl(t,x){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((x.n||'')+' '+t.n+' Japan')}
 var gq=Promise.resolve(),glast=0;
-function geoSearch(t,x,cb,n){var q=(x.n||'')+' '+String(t.n||'').split(' &')[0]+' Japan',url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit='+(n||5)+'&accept-language=de&extratags=1&addressdetails=1&q='+encodeURIComponent(q)+'&viewbox='+(t.lon-.7)+','+(t.lat+.7)+','+(t.lon+.7)+','+(t.lat-.7);
+function geoSearch(t,x,cb,n){geoUrl((x.n||'')+' '+String(t.n||'').split(' &')[0]+' Japan',t,n,cb)}
+function geoUrl(q,t,n,cb){var url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit='+(n||5)+'&accept-language=de,en&namedetails=1&extratags=1&addressdetails=1&q='+encodeURIComponent(q)+'&viewbox='+(t.lon-.7)+','+(t.lat+.7)+','+(t.lon+.7)+','+(t.lat-.7);
 gq=gq.then(function(){var w=Math.max(0,1100-(Date.now()-glast));return new Promise(function(r){setTimeout(r,w)})}).then(function(){glast=Date.now();return fetch(url)}).then(function(r){return r.json()}).then(function(j){cb(null,Array.isArray(j)?j:[])}).catch(function(e){cb(e||new Error('x'),[])})}
 function autoGeo(t,x){if(typeof fetch!=='function')return;geoSearch(t,x,function(err,res){if(err){msg('Ortssuche nicht erreichbar. Mit 🔎 oder 📌 später setzen.');return}
 var r=res.filter(function(o){return hav({lat:t.lat,lon:t.lon},{lat:+o.lat,lon:+o.lon})<80})[0];
 if(!r){msg('„'+x.n+'“ nicht gefunden. Mit 🔎 suchen oder mit 📌 auf der Karte setzen.');return}
 x.lat=Math.round(+r.lat*1e5)/1e5;x.lon=Math.round(+r.lon*1e5)/1e5;applyHit(x,r);save();if(S.stops[sel]===t){drawPl();drawMap()}msg('„'+x.n+'“ auf der Karte gefunden. Falsch? Pin ziehen oder mit 🔎 anderen Treffer wählen.')},1)}
-function shortName(o){return String(o.display_name||'').split(',').slice(0,3).join(',')}
+function niceName(o){var n=o.namedetails||{};return n['name:de']||n['name:en']||n['name:ja-Latn']||n['name:ja_rm']||n['name:ja_kana']&&''||n.name||o.name||String(o.display_name||'').split(',')[0]}
+function origName(o){var n=o.namedetails||{},b=niceName(o);return n.name&&n.name!==b&&/[\u3040-\u30ff\u4e00-\u9fff]/.test(n.name)?n.name:''}
+function shortName(o){var a=o.address||{},ort=a.city||a.town||a.village||a.municipality||a.suburb||'';return niceName(o)+(ort?', '+ort:'')}
+function guessTy(o){var c=o.category||o.class||'',t=o.type||'';if(/restaurant|fast_food|food_court/.test(t))return 'R';if(/cafe|bakery|ice_cream/.test(t))return 'C';if(/^(bar|pub|biergarten)$/.test(t))return 'B';if(/hotel|hostel|guest_house|apartment|ryokan|motel|chalet/.test(t))return 'H';if(/public_bath|onsen|hot_spring/.test(t))return 'O';if(c==='natural'||/park|garden|nature_reserve|beach|peak|waterfall/.test(t))return 'N';if(c==='shop'||t==='marketplace')return 'M';if(c==='tourism'||c==='historic'||/place_of_worship|temple|shrine|castle/.test(t))return 'S';return 'X'}
 var CARD=null,WP={};
 try{WP=JSON.parse(localStorage.getItem('japan-wp')||'{}')}catch(e){}
 var CU={ramen:'Ramen',sushi:'Sushi',japanese:'Japanisch',noodle:'Nudeln',seafood:'Meeresfrüchte',coffee_shop:'Kaffee',tempura:'Tempura',udon:'Udon',soba:'Soba',yakitori:'Yakitori',okonomiyaki:'Okonomiyaki',regional:'Regional',burger:'Burger',pizza:'Pizza',italian:'Italienisch',chinese:'Chinesisch',tea:'Tee',ice_cream:'Eis',dessert:'Dessert',tonkatsu:'Tonkatsu',izakaya:'Izakaya',curry:'Curry',beef:'Rindfleisch',fish:'Fisch'};
@@ -468,6 +474,7 @@ function drawPl(){var t=S.stops[sel],b=$('plw');if(!b||!t)return;if(!t.pl)t.pl=[
 b.innerHTML='<details open><summary>📍 Orte und Tipps ('+t.pl.length+')</summary><div id="plb"></div></details>';
 var opts=function(c){return PT.map(function(o){return '<option value="'+o[0]+'"'+(o[0]==c?' selected':'')+'>'+o[1]+' '+o[2]+'</option>'}).join('')};
 var h='';t.pl.forEach(function(x,i){h+='<div class="pr'+(x.ok?' dn':'')+'"><select class="ps" data-i="'+i+'">'+opts(x.ty)+'</select><input class="pn" data-i="'+i+'" placeholder="Name" value="'+esc(x.n)+'"><input class="pt" data-i="'+i+'" placeholder="Notiz (Zeit, Preis, Reservierung …)" value="'+esc(x.t||'')+'"><a class="btn pm" target="_blank" rel="noopener" href="'+plUrl(t,x)+'" title="In Google Maps öffnen">🗺️</a><button class="gb gi" data-i="'+i+'" title="Infokarte öffnen">ℹ️</button><button class="gb ge" data-i="'+i+'" title="Ort suchen und auf der Karte setzen">🔎</button><button class="gb gp" data-i="'+i+'" title="Per Klick auf der Karte setzen">📌</button>'+(x.lat!=null?'<button class="gb gz" data-i="'+i+'" title="Auf der Karte zeigen">🎯</button>':'<span class="hint" title="Noch keine Position">❔</span>')+'<label class="pk" title="Erledigt oder gebucht"><input type="checkbox" class="pc" data-i="'+i+'"'+(x.ok?' checked':'')+'> ✓</label><b class="x" data-i="'+i+'">×</b></div>'});
+h+='<div class="pr"><input id="qsr" placeholder="🔍 Ort suchen, z. B. Fushimi Inari, Ichiran Shibuya, Hotel …"><button id="qgo">Suchen</button></div><div id="qres" class="geo" style="display:none"></div>';
 h+='<div class="pr"><select id="pty">'+opts('R')+'</select><input id="pnn" placeholder="Neuer Ort, z. B. Ichiran Ramen"><button id="pad">+ Hinzufügen</button></div>';
 var sg=(SUG[t.n]||[]).filter(function(g){return !t.pl.some(function(x){return x.n==g[1]})});
 if(sg.length)h+='<div class="hint">Vorschläge zum Übernehmen:</div><div class="chips">'+sg.map(function(g,k){return '<button class="sgb" data-k="'+k+'">+ '+PTI(g[0])+' '+esc(g[1])+'</button>'}).join('')+'</div>';
@@ -483,7 +490,12 @@ pb.querySelectorAll('.gi').forEach(function(e){e.onclick=function(){var x=t.pl[+
 pb.querySelectorAll('.gz').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i];if(MAP&&x.lat!=null)MAP.flyTo([x.lat,x.lon],15,{duration:.8})}});
 pb.querySelectorAll('.gp').forEach(function(e){e.onclick=function(){placingPl=+e.dataset.i;setPl(false);$('map').classList.add('pl');msg('Tippe auf die Karte, um „'+t.pl[placingPl].n+'“ zu setzen.')}});
 pb.querySelectorAll('.ge').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i],row=e.parentNode,old=row.nextSibling;if(old&&old.className=='geo'){old.remove();return}var box=document.createElement('div');box.className='geo';box.textContent='Suche …';row.after(box);
-geoSearch(t,x,function(err,res){if(err){box.textContent='Ortssuche nicht erreichbar. Mit 📌 auf der Karte setzen.';return}if(!res.length){box.textContent='Nichts gefunden. Name ändern (z. B. mit Stadtteil) oder mit 📌 auf der Karte setzen.';return}box.innerHTML='Treffer wählen:';res.forEach(function(o){var b=document.createElement('button');b.textContent=shortName(o);b.onclick=function(){x.lat=Math.round(+o.lat*1e5)/1e5;x.lon=Math.round(+o.lon*1e5)/1e5;applyHit(x,o);save();drawPl();drawMap();if(MAP)MAP.flyTo([x.lat,x.lon],15,{duration:.8})};box.appendChild(b)})},5)}});
+geoSearch(t,x,function(err,res){if(err){box.textContent='Ortssuche nicht erreichbar. Mit 📌 auf der Karte setzen.';return}if(!res.length){box.textContent='Nichts gefunden. Name ändern (z. B. mit Stadtteil) oder mit 📌 auf der Karte setzen.';return}box.innerHTML='Treffer wählen:';res.forEach(function(o){var b=document.createElement('button');b.textContent=shortName(o)+(origName(o)?' ('+origName(o)+')':'');b.onclick=function(){x.lat=Math.round(+o.lat*1e5)/1e5;x.lon=Math.round(+o.lon*1e5)/1e5;applyHit(x,o);save();drawPl();drawMap();if(MAP)MAP.flyTo([x.lat,x.lon],15,{duration:.8})};box.appendChild(b)})},5)}});
+var qt=null,qseq=0;function runQ(){var q=$('qsr').value.trim(),box=$('qres');if(q.length<3){box.style.display='none';return}var my=++qseq;box.style.display='';box.textContent='Suche …';
+geoUrl(q+' Japan',t,8,function(err,res){if(my!==qseq||!$('qres'))return;if(err){box.textContent='Ortssuche nicht erreichbar (Internet?).';return}var seen={};res=res.filter(function(o){var k=niceName(o)+Math.round(o.lat*500)+Math.round(o.lon*500);if(seen[k])return false;return seen[k]=1});
+if(!res.length){box.textContent='Nichts gefunden. Anderen Namen oder Stadtteil probieren.';return}box.innerHTML='Treffer, „Hinzufügen“ setzt den Ort direkt auf die Karte:';
+res.forEach(function(o){var d=document.createElement('div');d.className='hit';var ty=guessTy(o),og=origName(o);d.innerHTML='<span>'+PTI(ty)+' <b>'+esc(shortName(o))+'</b>'+(og?' <span class="hint">('+esc(og)+')</span>':'')+'</span>';var b=document.createElement('button');b.textContent='+ Hinzufügen';b.onclick=function(){var np={ty:ty,n:niceName(o),t:'',ok:0,lat:Math.round(+o.lat*1e5)/1e5,lon:Math.round(+o.lon*1e5)/1e5};applyHit(np,o);t.pl.push(np);ref();if(MAP)MAP.flyTo([np.lat,np.lon],15,{duration:.8});msg('„'+np.n+'“ hinzugefügt und auf der Karte gesetzt.')};d.appendChild(b);box.appendChild(d)})},8)}
+$('qgo').onclick=runQ;$('qsr').oninput=function(){clearTimeout(qt);qt=setTimeout(runQ,900)};$('qsr').onkeydown=function(e){if(e.key=='Enter'){e.preventDefault();clearTimeout(qt);runQ()}};
 $('pad').onclick=function(){add($('pty').value,$('pnn').value.trim())};
 $('pnn').onkeydown=function(e){if(e.key=='Enter'){e.preventDefault();$('pad').click()}};
 pb.querySelectorAll('.sgb').forEach(function(e){e.onclick=function(){var g=sg[+e.dataset.k];add(g[0],g[1])}})}
