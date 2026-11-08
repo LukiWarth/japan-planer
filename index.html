@@ -118,6 +118,15 @@ html{scroll-behavior:smooth}
 .pr .gb{padding:2px 8px}
 .geo{margin:4px 0 8px;padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-size:.82rem}
 .geo button{display:block;width:100%;text-align:left;margin:3px 0;border-radius:8px}
+#icard{display:none;position:absolute;left:8px;bottom:8px;width:min(360px,calc(100% - 64px));max-height:72%;overflow:auto;z-index:8;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;box-shadow:0 6px 20px #0005;font-size:.86rem}
+#icard .ix{position:absolute;top:6px;right:6px;padding:0 9px}
+#icard .ih{font-size:1rem;margin-right:30px}
+#icard p{margin:5px 0}
+#icard .ib{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;clear:both}
+#icard .ib a,#icard .ib button{font-size:.8rem;padding:3px 10px;text-decoration:none;color:var(--fg)}
+#icard img{float:right;width:84px;height:84px;object-fit:cover;border-radius:8px;margin:0 0 6px 8px}
+#icard .src{font-size:.7rem;color:var(--muted)}
+@media(max-width:900px){#icard{position:fixed;left:8px;right:8px;bottom:8px;width:auto;max-height:55vh;z-index:40}}
 #lmap{height:560px;border-radius:13px;position:relative;z-index:0;background:var(--sea);font:inherit}
 .map.pl .leaflet-container{cursor:crosshair}
 .lp-wrap,.rl-wrap{background:none;border:0}
@@ -136,7 +145,7 @@ html{scroll-behavior:smooth}
 <div class="bar" id="rg"></div><div class="card" id="db"><p class="desc" id="rw"></p><div class="kp" id="kp"></div><div class="tl" id="tl"></div><div class="hint" id="cb2"></div><div class="hint" id="sy"></div><div class="hint" id="fo"></div><div class="hint" id="spt"></div></div><div class="card" id="sk" style="margin:0 0 12px"></div><div class="bar">
 <button id="add">+ Neues Ziel</button><button id="plc">📍 Auf Karte setzen</button><button id="cp">Plan als Text kopieren</button><button id="rs">Zurücksetzen</button><span id="msg"></span>
 </div>
-<div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zs" title="Straßenrouten ein/aus">🛣️</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
+<div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div id="icard"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zs" title="Straßenrouten ein/aus">🛣️</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
 <div class="grid"><div class="card" id="ed"></div><div class="card"><div id="list"></div><div id="gt"></div></div></div>
 <p class="hint" id="rstat"></p><p class="hint">Karte: © OpenStreetMap-Mitwirkende (deutscher Kartenstil: OSM Deutschland), Satellit: Esri. Oben links in der Karte lässt sich die Kartenart wechseln. Der Pin des gewählten Ziels lässt sich ziehen. Die Routen folgen den Straßen (Auto, Quelle: OSRM), Bahn und Flug zeigt die Karte nur als Luftlinie. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
 </div>
@@ -227,7 +236,7 @@ LAYER=L.layerGroup().addTo(MAP);
 MAP.on('move zoom',function(){drawFans();hideTip()});
 MAP.on('zoomend',function(){drawMap()});
 MAP.on('moveend',setGm);
-MAP.on('click',function(e){if(placingPl!==null&&S.stops[sel]&&S.stops[sel].pl[placingPl]){var px=S.stops[sel].pl[placingPl];px.lat=Math.round(e.latlng.lat*1e5)/1e5;px.lon=Math.round(e.latlng.lng*1e5)/1e5;placingPl=null;$('map').classList.remove('pl');save();drawPl();drawMap();msg('„'+px.n+'“ auf der Karte gesetzt.');return}if(!placing||!S.stops[sel])return;var s=S.stops[sel];s.lat=Math.round(e.latlng.lat*1e5)/1e5;s.lon=Math.round(e.latlng.lng*1e5)/1e5;setPl(false);save();all()});
+MAP.on('click',function(e){if(placingPl!==null&&S.stops[sel]&&S.stops[sel].pl[placingPl]){var px=S.stops[sel].pl[placingPl];px.lat=Math.round(e.latlng.lat*1e5)/1e5;px.lon=Math.round(e.latlng.lng*1e5)/1e5;placingPl=null;$('map').classList.remove('pl');save();drawPl();drawMap();msg('„'+px.n+'“ auf der Karte gesetzt.');return}if(!placing||!S.stops[sel]){closeCard();return}var s=S.stops[sel];s.lat=Math.round(e.latlng.lat*1e5)/1e5;s.lon=Math.round(e.latlng.lng*1e5)/1e5;setPl(false);save();all()});
 MAP.on('locationfound',function(e){if(GPS)GPS.remove();GPS=L.circleMarker(e.latlng,{radius:8,color:'#1c8fb5'}).addTo(MAP)});
 MAP.on('locationerror',function(){msg('Standort nicht verfügbar (Freigabe im Browser prüfen).')});
 if(window.ResizeObserver)new ResizeObserver(function(){MAP.invalidateSize()}).observe($('lmap'));
@@ -235,7 +244,7 @@ window.addEventListener('resize',function(){MAP.invalidateSize()})}
 function pinIcon(s,i){var b='';
 return L.divIcon({className:'lp-wrap',html:'<div class="lp'+(i===sel?' act':'')+'"><b>'+(i+1)+'</b></div><span class="lbl2">'+esc(s.n)+'</span>'+b,iconSize:[30,30],iconAnchor:[15,15]})}
 function drawMap(){
-if(!MAP)return;LAYER.clearLayers();
+if(!MAP)return;if(CARD&&(S.stops.indexOf(CARD.t)<0||(CARD.x&&CARD.t.pl.indexOf(CARD.x)<0)))closeCard();LAYER.clearLayers();
 var v=S.stops;
 for(var li=1;li<v.length;li++){var A=v[li-1],B=v[li],dd=hav(A,B),fl=dd>500,rd=ROADS?getLeg(A,B):null,rk=rd?rd.d/1000:(fl?dd:dd*1.3),hh=rd?rd.t/3600:(fl?dd/700+2.5:rk/SPD[RG]),mid=rd?rd.c[Math.floor(rd.c.length/2)]:[(A.lat+B.lat)/2,(A.lon+B.lon)/2];
 if(rd)L.polyline(rd.c,{color:'#c4452d',weight:4,opacity:.9}).addTo(LAYER);else L.polyline([ll(A),ll(B)],{color:'#c4452d',weight:3,dashArray:'8 7',opacity:.85}).addTo(LAYER);
@@ -244,11 +253,11 @@ var nl=0,ok=0,fa=0,lng=0;for(var q=1;q<v.length;q++){var Aq=v[q-1],Bq=v[q],k=leg
 var rs=$('rstat');if(rs)rs.textContent=!ROADS?'Routen: nur Luftlinie (🛣️ ist aus).':'Routen: '+ok+' von '+nl+' Etappen als Straßenroute'+(lng?', '+lng+' Etappe'+(lng>1?'n':'')+' über 500 km als Luftlinie (Flug/Bahn)':'')+(fa?'. '+fa+' Abfrage'+(fa>1?'n':'')+' fehlgeschlagen, dort steht die Luftlinie (Routendienst nicht erreichbar?)':(ok<nl?' (lädt …)':''))+'.';
 if(MAP.getZoom()>=8)v.forEach(function(s,si){(s.pl||[]).forEach(function(x,pi){if(x.lat==null||x.lon==null)return;
 var pm=L.marker([x.lat,x.lon],{icon:L.divIcon({className:'lp-wrap',html:'<div class="pp'+(x.ok?' dn':'')+'">'+PTI(x.ty)+'</div>'+(MAP.getZoom()>=12?'<span class="lbl2 pl2">'+esc(x.n)+'</span>':''),iconSize:[26,26],iconAnchor:[13,13]}),draggable:si===sel,zIndexOffset:500,title:x.n+(x.t?' – '+x.t:'')}).addTo(LAYER);
-pm.on('click',function(){if(si!==sel)pick(si)});
+pm.on('click',function(){if(si!==sel)pick(si);openCard(S.stops[si],x)});
 pm.on('dragend',function(){var p=pm.getLatLng();x.lat=Math.round(p.lat*1e5)/1e5;x.lon=Math.round(p.lng*1e5)/1e5;save();msg('Position von „'+x.n+'“ gespeichert.')})})});
 v.forEach(function(s,i){
 var m=L.marker(ll(s),{icon:pinIcon(s,i),draggable:i===sel,zIndexOffset:i===sel?1000:0,title:s.n}).addTo(LAYER);
-m.on('click',function(){pick(i)});m.on('mouseover',function(){showTip(i)});m.on('mouseout',hideTip);
+m.on('click',function(){pick(i);openCard(S.stops[i],null)});m.on('mouseover',function(){showTip(i)});m.on('mouseout',hideTip);
 m.on('dragend',function(){var p=m.getLatLng();s.lat=Math.round(p.lat*1e5)/1e5;s.lon=Math.round(p.lng*1e5)/1e5;save();setTimeout(all,0)})});
 drawFans()}
 function drawList(){
@@ -385,17 +394,69 @@ var SUG={
 'Takayama & Shirakawa-go':[['S','Altstadt Sanmachi Suji'],['S','Shirakawa-go Aussichtspunkt Shiroyama'],['R','Hida-Rind probieren']]};
 function plUrl(t,x){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((x.n||'')+' '+t.n+' Japan')}
 var gq=Promise.resolve(),glast=0;
-function geoSearch(t,x,cb,n){var q=(x.n||'')+' '+String(t.n||'').split(' &')[0]+' Japan',url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit='+(n||5)+'&accept-language=de&q='+encodeURIComponent(q)+'&viewbox='+(t.lon-.7)+','+(t.lat+.7)+','+(t.lon+.7)+','+(t.lat-.7);
+function geoSearch(t,x,cb,n){var q=(x.n||'')+' '+String(t.n||'').split(' &')[0]+' Japan',url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit='+(n||5)+'&accept-language=de&extratags=1&addressdetails=1&q='+encodeURIComponent(q)+'&viewbox='+(t.lon-.7)+','+(t.lat+.7)+','+(t.lon+.7)+','+(t.lat-.7);
 gq=gq.then(function(){var w=Math.max(0,1100-(Date.now()-glast));return new Promise(function(r){setTimeout(r,w)})}).then(function(){glast=Date.now();return fetch(url)}).then(function(r){return r.json()}).then(function(j){cb(null,Array.isArray(j)?j:[])}).catch(function(e){cb(e||new Error('x'),[])})}
 function autoGeo(t,x){if(typeof fetch!=='function')return;geoSearch(t,x,function(err,res){if(err){msg('Ortssuche nicht erreichbar. Mit 🔎 oder 📌 später setzen.');return}
 var r=res.filter(function(o){return hav({lat:t.lat,lon:t.lon},{lat:+o.lat,lon:+o.lon})<80})[0];
 if(!r){msg('„'+x.n+'“ nicht gefunden. Mit 🔎 suchen oder mit 📌 auf der Karte setzen.');return}
-x.lat=Math.round(+r.lat*1e5)/1e5;x.lon=Math.round(+r.lon*1e5)/1e5;save();if(S.stops[sel]===t){drawPl();drawMap()}msg('„'+x.n+'“ auf der Karte gefunden. Falsch? Pin ziehen oder mit 🔎 anderen Treffer wählen.')},1)}
+x.lat=Math.round(+r.lat*1e5)/1e5;x.lon=Math.round(+r.lon*1e5)/1e5;applyHit(x,r);save();if(S.stops[sel]===t){drawPl();drawMap()}msg('„'+x.n+'“ auf der Karte gefunden. Falsch? Pin ziehen oder mit 🔎 anderen Treffer wählen.')},1)}
 function shortName(o){return String(o.display_name||'').split(',').slice(0,3).join(',')}
+var CARD=null,WP={};
+try{WP=JSON.parse(localStorage.getItem('japan-wp')||'{}')}catch(e){}
+var CU={ramen:'Ramen',sushi:'Sushi',japanese:'Japanisch',noodle:'Nudeln',seafood:'Meeresfrüchte',coffee_shop:'Kaffee',tempura:'Tempura',udon:'Udon',soba:'Soba',yakitori:'Yakitori',okonomiyaki:'Okonomiyaki',regional:'Regional',burger:'Burger',pizza:'Pizza',italian:'Italienisch',chinese:'Chinesisch',tea:'Tee',ice_cream:'Eis',dessert:'Dessert',tonkatsu:'Tonkatsu',izakaya:'Izakaya',curry:'Curry',beef:'Rindfleisch',fish:'Fisch'};
+function cuis(c){return String(c).split(';').map(function(x){x=x.trim();return CU[x]||x.replace(/_/g,' ')}).join(', ')}
+function safeUrl(u){u=String(u||'').trim();if(!u)return '';if(/^https?:\/\//i.test(u))return u;if(/^[a-z][a-z0-9+.-]*:/i.test(u))return '';return /\./.test(u)?'https://'+u:''}
+function fmtHours(h){return String(h).replace(/\bSu\b/g,'So').replace(/\bTu\b/g,'Di').replace(/\bWe\b/g,'Mi').replace(/\bTh\b/g,'Do').replace(/\boff\b/g,'geschlossen').replace(/\bPH\b/g,'Feiertage').split(/;\s*/).map(esc).join('<br>')}
+function extractInfo(o){var ex=o.extratags||{},ad=o.address||{},fl=[];
+var road=[ad.road,ad.house_number].filter(Boolean).join(' '),addr=[road,ad.neighbourhood||ad.suburb||ad.city_district,ad.city||ad.town||ad.village||ad.municipality].filter(Boolean).join(', ');
+if(ex.wheelchair=='yes')fl.push('♿ rollstuhlgerecht');if(ex.takeaway=='yes')fl.push('🥡 Takeaway');if(ex.outdoor_seating=='yes')fl.push('🪑 Außenplätze');
+if(ex.internet_access=='wlan'||ex.internet_access=='yes')fl.push('📶 WLAN');if(ex['diet:vegetarian']=='yes'||ex['diet:vegetarian']=='only')fl.push('🥗 vegetarisch möglich');
+if(ex.reservation&&ex.reservation!='no')fl.push('📞 Reservierung '+({required:'nötig',yes:'möglich',recommended:'empfohlen'}[ex.reservation]||ex.reservation));
+if(ex.fee=='yes')fl.push('🎟️ Eintritt');if(ex.smoking=='no')fl.push('🚭 rauchfrei');
+return {web:ex.website||ex['contact:website']||ex.url||'',hours:ex.opening_hours||'',phone:ex.phone||ex['contact:phone']||'',cuisine:ex.cuisine||'',addr:addr,fl:fl}}
+function applyHit(x,o){x.osm=(o.osm_type||'')+(o.osm_id||'');x.info=extractInfo(o);x.infoTried=1}
+function fetchInfo(t,x,done){x.infoTried=1;geoSearch(t,x,function(err,res){if(!err){var best=null,bd=1e9;res.forEach(function(o){var d=x.lat!=null?hav({lat:x.lat,lon:x.lon},{lat:+o.lat,lon:+o.lon}):hav({lat:t.lat,lon:t.lon},{lat:+o.lat,lon:+o.lon})*1;if(d<bd){bd=d;best=o}});
+if(best&&bd<(x.lat!=null?0.4:80)){x.osm=(best.osm_type||'')+(best.osm_id||'');x.info=extractInfo(best);if(x.lat==null){x.lat=Math.round(+best.lat*1e5)/1e5;x.lon=Math.round(+best.lon*1e5)/1e5}}}
+save();done()},5)}
+function loadWp(t,done){var ti=String(t.n||'').split(' &')[0].replace(/ /g,'_');if(!ti||WP[ti]!==undefined){done();return}if(typeof fetch!=='function'){done();return}
+fetch('https://de.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(ti)+'?redirect=true').then(function(r){if(r.status==404)return null;if(!r.ok)throw 0;return r.json()}).then(function(j){
+if(j&&j.type!=='disambiguation'&&j.extract)WP[ti]={e:j.extract,u:(j.content_urls&&j.content_urls.desktop&&j.content_urls.desktop.page)||'',i:(j.thumbnail&&j.thumbnail.source)||''};else WP[ti]=0;
+try{localStorage.setItem('japan-wp',JSON.stringify(WP))}catch(e){}done()}).catch(function(){done()})}
+function cut(t,n){t=String(t||'');if(t.length<=n)return t;var c=t.slice(0,n),i=c.lastIndexOf('. ');return (i>120?c.slice(0,i+1):c.replace(/\s+\S*$/,'')+' …')}
+function openCard(t,x){CARD={t:t,x:x||null};$('icard').style.display='block';renderCard();
+if(x&&!x.info&&!x.infoTried&&typeof fetch==='function')fetchInfo(t,x,function(){if(CARD&&CARD.x===x)renderCard()});
+if(!x)loadWp(t,function(){if(CARD&&CARD.t===t&&!CARD.x)renderCard()})}
+function closeCard(){CARD=null;var e=$('icard');if(e){e.style.display='none';e.innerHTML=''}}
+function gmUrl(la,lo){return 'https://www.google.com/maps/search/?api=1&query='+la+','+lo}
+function renderCard(){var e=$('icard');if(!e||!CARD)return;var t=CARD.t,x=CARD.x,i=S.stops.indexOf(t),h='<button class="ix" id="icx" title="Schließen">×</button>';
+if(x){var inf=x.info,ty=PT.filter(function(o){return o[0]==x.ty})[0];
+h+='<div class="ih">'+PTI(x.ty)+' <b>'+esc(x.n)+'</b>'+(x.ok?' ✓':'')+'</div><p class="hint">'+(ty?ty[2]+' · ':'')+'bei '+esc(t.n)+'</p>';
+if(inf){if(inf.addr)h+='<p>📍 '+esc(inf.addr)+'</p>';
+h+='<p>🕒 <b>Öffnungszeiten</b><br>'+(inf.hours?fmtHours(inf.hours):'<span class="hint">nicht in OpenStreetMap eingetragen, bitte auf der Website oder bei Google prüfen</span>')+'</p>';
+var w=safeUrl(inf.web);h+='<p>🌐 '+(w?'<a href="'+esc(w)+'" target="_blank" rel="noopener">'+esc(w.replace(/^https?:\/\/(www\.)?/i,'').slice(0,45))+'</a>':'<span class="hint">keine Website eingetragen</span>')+'</p>';
+if(inf.phone)h+='<p>📞 <a href="tel:'+esc(String(inf.phone).replace(/[^\d+]/g,''))+'">'+esc(inf.phone)+'</a></p>';
+if(inf.cuisine)h+='<p>🍽️ '+esc(cuis(inf.cuisine))+'</p>';
+if(inf.fl&&inf.fl.length)h+='<p>'+inf.fl.map(esc).join(' · ')+'</p>'}
+else h+='<p class="hint">'+(x.infoTried?'Keine Details in OpenStreetMap gefunden. Name genauer eingeben (mit Stadtteil) und „↻ Infos neu laden“ tippen oder bei Google nachsehen.':'Lade Infos …')+'</p>';
+if(x.t)h+='<p>📝 '+esc(x.t)+'</p>';
+h+='<div class="ib">'+(x.lat!=null?'<a class="btn" target="_blank" rel="noopener" href="'+gmUrl(x.lat,x.lon)+'">🗺️ Google Maps</a><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+x.lat+','+x.lon+'">🧭 Route hierher</a>':'<a class="btn" target="_blank" rel="noopener" href="'+plUrl(t,x)+'">🗺️ Google Maps</a>')+'<a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(x.n+' '+String(t.n).split(' &')[0]+' Öffnungszeiten')+'">🔍 Google</a><button id="icr">↻ Infos neu laden</button><button id="ice">✏️ Bearbeiten</button></div><p class="src">Quelle: © OpenStreetMap-Mitwirkende, ohne Gewähr. Öffnungszeiten vor dem Besuch prüfen.</p>'}
+else{var v=visit(i),b=bl(i),ti=String(t.n||'').split(' &')[0].replace(/ /g,'_'),wp=WP[ti];
+h+='<div class="ih"><b>'+(i+1)+'. '+esc(t.n)+'</b> '+icons(t)+'</div><p class="hint">'+fmtD(v[0])+'–'+fmtD(v[1])+' · '+t.d+' Tage'+(sum(t)?' · ca. '+eur(sum(t)):'')+'</p>'+(b?'<p>'+b.e+' '+esc(b.t)+'</p>':'');
+if(wp)h+='<p>'+(wp.i?'<img src="'+esc(wp.i)+'" alt="" referrerpolicy="no-referrer">':'')+esc(cut(wp.e,420))+' <a href="'+esc(wp.u)+'" target="_blank" rel="noopener">Wikipedia</a></p>';else if(WP[ti]===undefined)h+='<p class="hint">Lade Infos …</p>';
+if(t.food)h+='<p>🍽️ <b>Typisch</b><br>'+t.food.split('\n').filter(Boolean).map(esc).join(' · ')+'</p>';
+if(t.sp)h+='<p>🌸 <b>Kirschblüten-Spots</b><br>'+t.sp.split('\n').filter(Boolean).map(esc).join(' · ')+'</p>';
+if(t.pl&&t.pl.length)h+='<p>📍 <b>Eure Orte</b></p><div class="ib" style="margin-top:0" id="icp">'+t.pl.map(function(o,k){return '<button data-k="'+k+'">'+PTI(o.ty)+' '+esc(o.n)+'</button>'}).join('')+'</div>';
+h+='<div class="ib"><a class="btn" target="_blank" rel="noopener" href="'+gmUrl(t.lat,t.lon)+'">🗺️ Google Maps</a>'+(i>0?'<a class="btn" target="_blank" rel="noopener" href="'+legUrl(S.stops[i-1],t)+'">🧭 Route vom vorherigen</a>':'')+'<button id="ice">✏️ Details und Tipps</button></div>'+(wp?'<p class="src">Text: Wikipedia (CC BY-SA)</p>':'')}
+e.innerHTML=h;
+$('icx').onclick=closeCard;
+var eb=$('ice');if(eb)eb.onclick=function(){var k=S.stops.indexOf(t);if(k>=0&&k!==sel)pick(k);showTab('dt')};
+var rb=$('icr');if(rb)rb.onclick=function(){x.info=null;x.infoTried=0;renderCard();fetchInfo(t,x,function(){if(CARD&&CARD.x===x)renderCard()})};
+var pb=$('icp');if(pb)pb.querySelectorAll('button').forEach(function(b){b.onclick=function(){var o=t.pl[+b.dataset.k];openCard(t,o);if(MAP&&o.lat!=null)MAP.flyTo([o.lat,o.lon],15,{duration:.8})}})}
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeCard()});
 function drawPl(){var t=S.stops[sel],b=$('plw');if(!b||!t)return;if(!t.pl)t.pl=[];
 b.innerHTML='<details open><summary>📍 Orte und Tipps ('+t.pl.length+')</summary><div id="plb"></div></details>';
 var opts=function(c){return PT.map(function(o){return '<option value="'+o[0]+'"'+(o[0]==c?' selected':'')+'>'+o[1]+' '+o[2]+'</option>'}).join('')};
-var h='';t.pl.forEach(function(x,i){h+='<div class="pr'+(x.ok?' dn':'')+'"><select class="ps" data-i="'+i+'">'+opts(x.ty)+'</select><input class="pn" data-i="'+i+'" placeholder="Name" value="'+esc(x.n)+'"><input class="pt" data-i="'+i+'" placeholder="Notiz (Zeit, Preis, Reservierung …)" value="'+esc(x.t||'')+'"><a class="btn pm" target="_blank" rel="noopener" href="'+plUrl(t,x)+'" title="In Google Maps öffnen">🗺️</a><button class="gb ge" data-i="'+i+'" title="Ort suchen und auf der Karte setzen">🔎</button><button class="gb gp" data-i="'+i+'" title="Per Klick auf der Karte setzen">📌</button>'+(x.lat!=null?'<button class="gb gz" data-i="'+i+'" title="Auf der Karte zeigen">🎯</button>':'<span class="hint" title="Noch keine Position">❔</span>')+'<label class="pk" title="Erledigt oder gebucht"><input type="checkbox" class="pc" data-i="'+i+'"'+(x.ok?' checked':'')+'> ✓</label><b class="x" data-i="'+i+'">×</b></div>'});
+var h='';t.pl.forEach(function(x,i){h+='<div class="pr'+(x.ok?' dn':'')+'"><select class="ps" data-i="'+i+'">'+opts(x.ty)+'</select><input class="pn" data-i="'+i+'" placeholder="Name" value="'+esc(x.n)+'"><input class="pt" data-i="'+i+'" placeholder="Notiz (Zeit, Preis, Reservierung …)" value="'+esc(x.t||'')+'"><a class="btn pm" target="_blank" rel="noopener" href="'+plUrl(t,x)+'" title="In Google Maps öffnen">🗺️</a><button class="gb gi" data-i="'+i+'" title="Infokarte öffnen">ℹ️</button><button class="gb ge" data-i="'+i+'" title="Ort suchen und auf der Karte setzen">🔎</button><button class="gb gp" data-i="'+i+'" title="Per Klick auf der Karte setzen">📌</button>'+(x.lat!=null?'<button class="gb gz" data-i="'+i+'" title="Auf der Karte zeigen">🎯</button>':'<span class="hint" title="Noch keine Position">❔</span>')+'<label class="pk" title="Erledigt oder gebucht"><input type="checkbox" class="pc" data-i="'+i+'"'+(x.ok?' checked':'')+'> ✓</label><b class="x" data-i="'+i+'">×</b></div>'});
 h+='<div class="pr"><select id="pty">'+opts('R')+'</select><input id="pnn" placeholder="Neuer Ort, z. B. Ichiran Ramen"><button id="pad">+ Hinzufügen</button></div>';
 var sg=(SUG[t.n]||[]).filter(function(g){return !t.pl.some(function(x){return x.n==g[1]})});
 if(sg.length)h+='<div class="hint">Vorschläge zum Übernehmen:</div><div class="chips">'+sg.map(function(g,k){return '<button class="sgb" data-k="'+k+'">+ '+PTI(g[0])+' '+esc(g[1])+'</button>'}).join('')+'</div>';
@@ -407,10 +468,11 @@ pb.querySelectorAll('.pt').forEach(function(e){e.oninput=function(){t.pl[+e.data
 pb.querySelectorAll('.pc').forEach(function(e){e.onchange=function(){t.pl[+e.dataset.i].ok=e.checked?1:0;ref()}});
 pb.querySelectorAll('.x').forEach(function(e){e.onclick=function(){t.pl.splice(+e.dataset.i,1);ref()}});
 function add(ty,n){if(!n)return;var np={ty:ty,n:n,t:'',ok:0};t.pl.push(np);ref();autoGeo(t,np)}
+pb.querySelectorAll('.gi').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i];openCard(t,x);if(MAP&&x.lat!=null)MAP.flyTo([x.lat,x.lon],15,{duration:.8})}});
 pb.querySelectorAll('.gz').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i];if(MAP&&x.lat!=null)MAP.flyTo([x.lat,x.lon],15,{duration:.8})}});
 pb.querySelectorAll('.gp').forEach(function(e){e.onclick=function(){placingPl=+e.dataset.i;setPl(false);$('map').classList.add('pl');msg('Tippe auf die Karte, um „'+t.pl[placingPl].n+'“ zu setzen.')}});
 pb.querySelectorAll('.ge').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i],row=e.parentNode,old=row.nextSibling;if(old&&old.className=='geo'){old.remove();return}var box=document.createElement('div');box.className='geo';box.textContent='Suche …';row.after(box);
-geoSearch(t,x,function(err,res){if(err){box.textContent='Ortssuche nicht erreichbar. Mit 📌 auf der Karte setzen.';return}if(!res.length){box.textContent='Nichts gefunden. Name ändern (z. B. mit Stadtteil) oder mit 📌 auf der Karte setzen.';return}box.innerHTML='Treffer wählen:';res.forEach(function(o){var b=document.createElement('button');b.textContent=shortName(o);b.onclick=function(){x.lat=Math.round(+o.lat*1e5)/1e5;x.lon=Math.round(+o.lon*1e5)/1e5;save();drawPl();drawMap();if(MAP)MAP.flyTo([x.lat,x.lon],15,{duration:.8})};box.appendChild(b)})},5)}});
+geoSearch(t,x,function(err,res){if(err){box.textContent='Ortssuche nicht erreichbar. Mit 📌 auf der Karte setzen.';return}if(!res.length){box.textContent='Nichts gefunden. Name ändern (z. B. mit Stadtteil) oder mit 📌 auf der Karte setzen.';return}box.innerHTML='Treffer wählen:';res.forEach(function(o){var b=document.createElement('button');b.textContent=shortName(o);b.onclick=function(){x.lat=Math.round(+o.lat*1e5)/1e5;x.lon=Math.round(+o.lon*1e5)/1e5;applyHit(x,o);save();drawPl();drawMap();if(MAP)MAP.flyTo([x.lat,x.lon],15,{duration:.8})};box.appendChild(b)})},5)}});
 $('pad').onclick=function(){add($('pty').value,$('pnn').value.trim())};
 $('pnn').onkeydown=function(e){if(e.key=='Enter'){e.preventDefault();$('pad').click()}};
 pb.querySelectorAll('.sgb').forEach(function(e){e.onclick=function(){var g=sg[+e.dataset.k];add(g[0],g[1])}})}
