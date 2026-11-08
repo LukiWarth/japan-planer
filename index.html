@@ -133,7 +133,7 @@ html{scroll-behavior:smooth}
 </div>
 <div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
 <div class="grid"><div class="card" id="ed"></div><div class="card"><div id="list"></div><div id="gt"></div></div></div>
-<p class="hint">Karte: © OpenStreetMap-Mitwirkende, Satellit: Esri. Der Pin des gewählten Ziels lässt sich ziehen. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
+<p class="hint">Karte: © OpenStreetMap-Mitwirkende (deutscher Kartenstil: OSM Deutschland), Satellit: Esri. Oben links in der Karte lässt sich die Kartenart wechseln. Der Pin des gewählten Ziels lässt sich ziehen. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
 </div>
 <div id="ov"><img alt=""></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -208,9 +208,11 @@ function ctr(){if(MAP){var c=MAP.getCenter();return [Math.round(c.lat*1e5)/1e5,M
 function initMap(){
 if(typeof L==='undefined'){$('lmap').innerHTML='<p class="hint" style="padding:16px">Die Kartenbibliothek konnte nicht geladen werden (keine Internetverbindung?). Zielliste, Kosten und Planer funktionieren trotzdem.</p>';return}
 MAP=L.map('lmap',{zoomControl:false,worldCopyJump:true}).setView([36,138],5);
-var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(MAP);
+var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'});
+var osmDe=L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap, Kartenstil: OSM Deutschland'}).addTo(MAP);
+var deErr=0;osmDe.on('tileerror',function(){deErr++;if(deErr==4){osmDe.remove();osm.addTo(MAP);msg('Deutsche Karte nicht erreichbar, internationale Karte aktiv (Beschriftung evtl. japanisch).')}});
 var sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Esri'});
-L.control.layers({'Karte':osm,'Satellit':sat},null,{position:'topleft'}).addTo(MAP);
+L.control.layers({'Karte (Deutsch)':osmDe,'Karte (international)':osm,'Satellit':sat},null,{position:'topleft'}).addTo(MAP);
 L.control.scale({imperial:false}).addTo(MAP);
 LAYER=L.layerGroup().addTo(MAP);
 MAP.on('move zoom',function(){drawFans();hideTip()});

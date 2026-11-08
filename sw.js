@@ -1,5 +1,5 @@
 // Service Worker: App offline verfügbar machen, Kartenkacheln beim Ansehen merken
-const V = 'japan-planer-v1';
+const V = 'japan-planer-v2';
 const TILES = 'japan-tiles-v1';
 const LEAF = 'https://unpkg.com/leaflet@1.9.4/dist/';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png', LEAF + 'leaflet.css', LEAF + 'leaflet.js'];
@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET') return;
   const u = new URL(r.url);
-  if (u.hostname.endsWith('tile.openstreetmap.org') || u.hostname.endsWith('arcgisonline.com')) {
+  if (u.hostname.endsWith('openstreetmap.org') || u.hostname.endsWith('openstreetmap.de') || u.hostname.endsWith('arcgisonline.com')) {
     e.respondWith(caches.open(TILES).then(async c => {
       const hit = await c.match(r);
       const net = fetch(r).then(res => { if (res && (res.ok || res.type === 'opaque')) { c.put(r, res.clone()).then(() => trim(c)); } return res; }).catch(() => hit);
