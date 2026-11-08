@@ -131,9 +131,9 @@ html{scroll-behavior:smooth}
 <div class="bar" id="rg"></div><div class="card" id="db"><p class="desc" id="rw"></p><div class="kp" id="kp"></div><div class="tl" id="tl"></div><div class="hint" id="cb2"></div><div class="hint" id="sy"></div><div class="hint" id="fo"></div><div class="hint" id="spt"></div></div><div class="card" id="sk" style="margin:0 0 12px"></div><div class="bar">
 <button id="add">+ Neues Ziel</button><button id="plc">📍 Auf Karte setzen</button><button id="cp">Plan als Text kopieren</button><button id="rs">Zurücksetzen</button><span id="msg"></span>
 </div>
-<div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
+<div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zs" title="Straßenrouten ein/aus">🛣️</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
 <div class="grid"><div class="card" id="ed"></div><div class="card"><div id="list"></div><div id="gt"></div></div></div>
-<p class="hint">Karte: © OpenStreetMap-Mitwirkende (deutscher Kartenstil: OSM Deutschland), Satellit: Esri. Oben links in der Karte lässt sich die Kartenart wechseln. Der Pin des gewählten Ziels lässt sich ziehen. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
+<p class="hint">Karte: © OpenStreetMap-Mitwirkende (deutscher Kartenstil: OSM Deutschland), Satellit: Esri. Oben links in der Karte lässt sich die Kartenart wechseln. Der Pin des gewählten Ziels lässt sich ziehen. Die Routen folgen den Straßen (Auto, Quelle: OSRM), Bahn und Flug zeigt die Karte nur als Luftlinie. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
 </div>
 <div id="ov"><img alt=""></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -201,7 +201,11 @@ function esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'
 function msg(t){$('msg').textContent=t;clearTimeout(rt);rt=setTimeout(function(){$('msg').textContent=''},4000)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){msg('Speicher voll: bitte weniger oder kleinere Bilder verwenden.')}}
 function saveSoon(){clearTimeout(tm);tm=setTimeout(save,300)}
-var MAP=null,LAYER=null,GPS=null;
+var MAP=null,LAYER=null,GPS=null,ROADS=true,RTC={},pend={};
+try{ROADS=localStorage.getItem('japan-roads')!=='0';RTC=JSON.parse(localStorage.getItem('japan-routes')||'{}')}catch(e){}
+function legKey(A,B){return A.lat.toFixed(3)+','+A.lon.toFixed(3)+';'+B.lat.toFixed(3)+','+B.lon.toFixed(3)}
+function getLeg(A,B){var k=legKey(A,B);if(RTC[k])return RTC[k];if(pend[k]||hav(A,B)>500||typeof fetch!=='function')return null;pend[k]=1;
+fetch('https://router.project-osrm.org/route/v1/driving/'+A.lon+','+A.lat+';'+B.lon+','+B.lat+'?overview=simplified&geometries=geojson').then(function(r){return r.json()}).then(function(j){var g=j&&j.routes&&j.routes[0];if(g&&g.geometry&&g.geometry.coordinates){RTC[k]={c:g.geometry.coordinates.map(function(p){return [+p[1].toFixed(4),+p[0].toFixed(4)]}),d:g.distance,t:g.duration};try{localStorage.setItem('japan-routes',JSON.stringify(RTC))}catch(e){}}}).catch(function(){}).then(function(){delete pend[k];if(RTC[k])drawMap()});return null}
 function ll(s){return [s.lat,s.lon]}
 function inMap(){return true}
 function ctr(){if(MAP){var c=MAP.getCenter();return [Math.round(c.lat*1e5)/1e5,Math.round(c.lng*1e5)/1e5]}return [36,138]}
@@ -228,9 +232,9 @@ return L.divIcon({className:'lp-wrap',html:'<div class="lp'+(i===sel?' act':'')+
 function drawMap(){
 if(!MAP)return;LAYER.clearLayers();
 var v=S.stops;
-if(v.length>1)L.polyline(v.map(ll),{color:'#c4452d',weight:3,dashArray:'8 7',opacity:.85}).addTo(LAYER);
-if(MAP.getZoom()>=7)for(var li=1;li<v.length;li++){var A=v[li-1],B=v[li],dd=hav(A,B),fl=dd>500,rk=fl?dd:dd*1.3,hh=fl?dd/700+2.5:rk/SPD[RG];
-L.marker([(A.lat+B.lat)/2,(A.lon+B.lon)/2],{icon:L.divIcon({className:'rl-wrap',html:'<span class="rl2">'+(fl?'✈️ ':'')+Math.round(rk)+' km · '+ft(hh)+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(LAYER)}
+for(var li=1;li<v.length;li++){var A=v[li-1],B=v[li],dd=hav(A,B),fl=dd>500,rd=ROADS?getLeg(A,B):null,rk=rd?rd.d/1000:(fl?dd:dd*1.3),hh=rd?rd.t/3600:(fl?dd/700+2.5:rk/SPD[RG]),mid=rd?rd.c[Math.floor(rd.c.length/2)]:[(A.lat+B.lat)/2,(A.lon+B.lon)/2];
+if(rd)L.polyline(rd.c,{color:'#c4452d',weight:4,opacity:.9}).addTo(LAYER);else L.polyline([ll(A),ll(B)],{color:'#c4452d',weight:3,dashArray:'8 7',opacity:.85}).addTo(LAYER);
+if(MAP.getZoom()>=7)L.marker(mid,{icon:L.divIcon({className:'rl-wrap',html:'<span class="rl2">'+(rd?'🚗 ':fl?'✈️ ':'')+Math.round(rk)+' km · '+ft(hh)+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(LAYER)}
 v.forEach(function(s,i){
 var m=L.marker(ll(s),{icon:pinIcon(s,i),draggable:i===sel,zIndexOffset:i===sel?1000:0,title:s.n}).addTo(LAYER);
 m.on('click',function(){pick(i)});m.on('mouseover',function(){showTip(i)});m.on('mouseout',hideTip);
@@ -347,6 +351,7 @@ function hideTip(){$('tip').style.display='none'}
 function stopPlay(){clearInterval(ptimer);ptimer=null;$('zp').textContent='▶'}
 $('zi').onclick=function(){stopPlay();if(MAP)MAP.zoomIn()};$('zo').onclick=function(){stopPlay();if(MAP)MAP.zoomOut()};
 $('zr').onclick=function(){stopPlay();resetView()};$('zq').onclick=function(){if(!S.stops.length)return;setPl(!placing);msg(placing?'Tippe auf die Karte, um das ausgewählte Ziel zu platzieren.':'')};$('zf').onclick=function(){stopPlay();focusStop(sel)};
+$('zs').className=ROADS?'on':'';$('zs').onclick=function(){ROADS=!ROADS;try{localStorage.setItem('japan-roads',ROADS?'1':'0')}catch(e){}this.className=ROADS?'on':'';drawMap();msg(ROADS?'Straßenrouten an (Auto, Strecken bis 500 km).':'Straßenrouten aus, nur Luftlinie.')};
 $('zl').onclick=function(){if(MAP)MAP.locate({setView:true,maxZoom:14})};
 $('zp').onclick=function(){if(ptimer){stopPlay();return}var i=0;pick(0);focusStop(0,9);$('zp').textContent='⏸';
 ptimer=setInterval(function(){i++;if(i>=S.stops.length){stopPlay();resetView();return}pick(i);focusStop(i,9)},2600)};
