@@ -113,6 +113,7 @@ html{scroll-behavior:smooth}
 #dm a{color:var(--accent);margin-right:6px}
 #lmap .leaflet-overlay-pane svg{width:auto;height:auto;max-width:none;max-height:none;border-radius:0}
 .pp{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #1c8fb5;display:grid;place-items:center;font-size:14px;box-shadow:0 2px 5px #0005;box-sizing:border-box}
+.rl2.hl{color:#1e6fd9;border-color:#1e6fd9}
 .pp.dn{opacity:.55;border-color:#999}
 .pl2{left:30px;top:3px;font-size:12px}
 .pr .gb{padding:2px 8px}
@@ -253,6 +254,10 @@ if(rd)L.polyline(rd.c,{color:'#c4452d',weight:4,opacity:.9}).addTo(LAYER);else L
 if(MAP.getZoom()>=7)L.marker(mid,{icon:L.divIcon({className:'rl-wrap',html:'<span class="rl2">'+(rd?'🚗 ':fl?'✈️ ':'')+Math.round(rk)+' km · '+ft(hh)+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(LAYER)}
 var nl=0,ok=0,fa=0,lng=0;for(var q=1;q<v.length;q++){var Aq=v[q-1],Bq=v[q],k=legKey(Aq,Bq);if(hav(Aq,Bq)>500){lng++;continue}nl++;if(RTC[k])ok++;else if(FAIL[k])fa++}
 var rs=$('rstat');if(rs)rs.textContent=!ROADS?'Routen: nur Luftlinie (🛣️ ist aus).':'Routen: '+ok+' von '+nl+' Etappen als Straßenroute'+(lng?', '+lng+' Etappe'+(lng>1?'n':'')+' über 500 km als Luftlinie (Flug/Bahn)':'')+(fa?'. '+fa+' Abfrage'+(fa>1?'n':'')+' fehlgeschlagen, dort steht die Luftlinie (Routendienst nicht erreichbar?)':(ok<nl?' (lädt …)':''))+'.';
+var hs=v[sel];if(hs&&hs.pl&&MAP.getZoom()>=8){var hot=null;if(CARD&&CARD.t===hs&&CARD.x&&CARD.x.ty==='H'&&CARD.x.lat!=null)hot=CARD.x;if(!hot)hs.pl.forEach(function(x){if(!hot&&x.ty==='H'&&x.lat!=null&&x.lon!=null)hot=x});
+if(hot){hs.pl.forEach(function(x){if(x===hot||x.ty==='H'||x.lat==null||x.lon==null)return;var hd=hav(hot,x),hr=ROADS&&hd<=500?getLeg(hot,x):null;
+if(hr)L.polyline(hr.c,{color:'#1e6fd9',weight:4,opacity:.85}).addTo(LAYER);else L.polyline([ll(hot),ll(x)],{color:'#1e6fd9',weight:3,dashArray:'6 6',opacity:.8}).addTo(LAYER);
+if(MAP.getZoom()>=11){var hk=hr?hr.d/1000:hd*1.3,hm=hr?hr.c[Math.floor(hr.c.length/2)]:[(hot.lat+x.lat)/2,(hot.lon+x.lon)/2];L.marker(hm,{icon:L.divIcon({className:'rl-wrap',html:'<span class="rl2 hl">'+(hk<1?Math.round(hk*1000)+' m':hk.toFixed(1)+' km')+(hr?' \u00b7 '+ft(hr.t/3600):'')+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(LAYER)}})}}
 if(MAP.getZoom()>=8)v.forEach(function(s,si){(s.pl||[]).forEach(function(x,pi){if(x.lat==null||x.lon==null)return;
 var pm=L.marker([x.lat,x.lon],{icon:L.divIcon({className:'lp-wrap',html:'<div class="pp'+(x.ok?' dn':'')+'">'+PTI(x.ty)+'</div>'+(MAP.getZoom()>=12?'<span class="lbl2 pl2">'+esc(x.n)+'</span>':''),iconSize:[26,26],iconAnchor:[13,13]}),draggable:si===sel,zIndexOffset:500,title:x.n+(x.t?' – '+x.t:'')}).addTo(LAYER);
 pm.on('click',function(){if(si!==sel)pick(si);openCard(S.stops[si],x)});
