@@ -112,6 +112,12 @@ html{scroll-behavior:smooth}
 #dm{position:absolute;left:8px;right:56px;bottom:8px;z-index:6;display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.8rem}
 #dm a{color:var(--accent);margin-right:6px}
 #lmap .leaflet-overlay-pane svg{width:auto;height:auto;max-width:none;max-height:none;border-radius:0}
+.pp{width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #1c8fb5;display:grid;place-items:center;font-size:14px;box-shadow:0 2px 5px #0005;box-sizing:border-box}
+.pp.dn{opacity:.55;border-color:#999}
+.pl2{left:30px;top:3px;font-size:12px}
+.pr .gb{padding:2px 8px}
+.geo{margin:4px 0 8px;padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-size:.82rem}
+.geo button{display:block;width:100%;text-align:left;margin:3px 0;border-radius:8px}
 #lmap{height:560px;border-radius:13px;position:relative;z-index:0;background:var(--sea);font:inherit}
 .map.pl .leaflet-container{cursor:crosshair}
 .lp-wrap,.rl-wrap{background:none;border:0}
@@ -132,7 +138,7 @@ html{scroll-behavior:smooth}
 </div>
 <div class="map" id="map"><div id="lmap"></div><div id="fans"></div><div id="tip"></div><div class="zm"><button id="zi" title="Vergrößern">＋</button><button id="zo" title="Verkleinern">−</button><button id="zr" title="Ganze Reise zeigen">⟲</button><button id="zf" title="Auf Auswahl zoomen">🎯</button><button id="zp" title="Route abspielen">▶</button><button id="zq" title="Ausgewähltes Ziel per Klick platzieren">📍</button><button id="zs" title="Straßenrouten ein/aus">🛣️</button><button id="zl" title="Mein Standort">📡</button><a class="btn" id="zg" target="_blank" rel="noopener" title="Diesen Ausschnitt in Google Maps öffnen">🌍</a></div></div>
 <div class="grid"><div class="card" id="ed"></div><div class="card"><div id="list"></div><div id="gt"></div></div></div>
-<p class="hint">Karte: © OpenStreetMap-Mitwirkende (deutscher Kartenstil: OSM Deutschland), Satellit: Esri. Oben links in der Karte lässt sich die Kartenart wechseln. Der Pin des gewählten Ziels lässt sich ziehen. Die Routen folgen den Straßen (Auto, Quelle: OSRM), Bahn und Flug zeigt die Karte nur als Luftlinie. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
+<p class="hint" id="rstat"></p><p class="hint">Karte: © OpenStreetMap-Mitwirkende (deutscher Kartenstil: OSM Deutschland), Satellit: Esri. Oben links in der Karte lässt sich die Kartenart wechseln. Der Pin des gewählten Ziels lässt sich ziehen. Die Routen folgen den Straßen (Auto, Quelle: OSRM), Bahn und Flug zeigt die Karte nur als Luftlinie. Zoom per Knöpfe, Mausrad oder Pinch. Kartenkacheln werden beim Ansehen für offline gemerkt.</p>
 </div>
 <div id="ov"><img alt=""></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -200,17 +206,17 @@ function esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'
 function msg(t){$('msg').textContent=t;clearTimeout(rt);rt=setTimeout(function(){$('msg').textContent=''},4000)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){msg('Speicher voll: bitte weniger oder kleinere Bilder verwenden.')}}
 function saveSoon(){clearTimeout(tm);tm=setTimeout(save,300)}
-var MAP=null,LAYER=null,GPS=null,ROADS=true,RTC={},pend={};
+var MAP=null,LAYER=null,GPS=null,ROADS=true,RTC={},pend={},FAIL={},placingPl=null;
 try{ROADS=localStorage.getItem('japan-roads')!=='0';RTC=JSON.parse(localStorage.getItem('japan-routes')||'{}')}catch(e){}
 function legKey(A,B){return A.lat.toFixed(3)+','+A.lon.toFixed(3)+';'+B.lat.toFixed(3)+','+B.lon.toFixed(3)}
-function getLeg(A,B){var k=legKey(A,B);if(RTC[k])return RTC[k];if(pend[k]||hav(A,B)>500||typeof fetch!=='function')return null;pend[k]=1;
-fetch('https://router.project-osrm.org/route/v1/driving/'+A.lon+','+A.lat+';'+B.lon+','+B.lat+'?overview=simplified&geometries=geojson').then(function(r){return r.json()}).then(function(j){var g=j&&j.routes&&j.routes[0];if(g&&g.geometry&&g.geometry.coordinates){RTC[k]={c:g.geometry.coordinates.map(function(p){return [+p[1].toFixed(4),+p[0].toFixed(4)]}),d:g.distance,t:g.duration};try{localStorage.setItem('japan-routes',JSON.stringify(RTC))}catch(e){}}}).catch(function(){}).then(function(){delete pend[k];if(RTC[k])drawMap()});return null}
+function getLeg(A,B){var k=legKey(A,B);if(RTC[k])return RTC[k];if(pend[k]||FAIL[k]||hav(A,B)>500||typeof fetch!=='function')return null;pend[k]=1;
+fetch('https://router.project-osrm.org/route/v1/driving/'+A.lon+','+A.lat+';'+B.lon+','+B.lat+'?overview=simplified&geometries=geojson').then(function(r){return r.json()}).then(function(j){var g=j&&j.routes&&j.routes[0];if(g&&g.geometry&&g.geometry.coordinates){RTC[k]={c:g.geometry.coordinates.map(function(p){return [+p[1].toFixed(4),+p[0].toFixed(4)]}),d:g.distance,t:g.duration};try{localStorage.setItem('japan-routes',JSON.stringify(RTC))}catch(e){}}}).catch(function(){FAIL[k]=1}).then(function(){delete pend[k];if(!RTC[k])FAIL[k]=1;drawMap()});return null}
 function ll(s){return [s.lat,s.lon]}
 function inMap(){return true}
 function ctr(){if(MAP){var c=MAP.getCenter();return [Math.round(c.lat*1e5)/1e5,Math.round(c.lng*1e5)/1e5]}return [36,138]}
 function initMap(){
 if(typeof L==='undefined'){$('lmap').innerHTML='<p class="hint" style="padding:16px">Die Kartenbibliothek konnte nicht geladen werden (keine Internetverbindung?). Zielliste, Kosten und Planer funktionieren trotzdem.</p>';return}
-MAP=L.map('lmap',{zoomControl:false,worldCopyJump:true}).setView([36,138],5);
+MAP=L.map('lmap',{zoomControl:false,worldCopyJump:true,preferCanvas:true}).setView([36,138],5);
 var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'});
 var osmDe=L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap, Kartenstil: OSM Deutschland'}).addTo(MAP);
 var deErr=0;osmDe.on('tileerror',function(){deErr++;if(deErr==4){osmDe.remove();osm.addTo(MAP);msg('Deutsche Karte nicht erreichbar, internationale Karte aktiv (Beschriftung evtl. japanisch).')}});
@@ -221,12 +227,12 @@ LAYER=L.layerGroup().addTo(MAP);
 MAP.on('move zoom',function(){drawFans();hideTip()});
 MAP.on('zoomend',function(){drawMap()});
 MAP.on('moveend',setGm);
-MAP.on('click',function(e){if(!placing||!S.stops[sel])return;var s=S.stops[sel];s.lat=Math.round(e.latlng.lat*1e5)/1e5;s.lon=Math.round(e.latlng.lng*1e5)/1e5;setPl(false);save();all()});
+MAP.on('click',function(e){if(placingPl!==null&&S.stops[sel]&&S.stops[sel].pl[placingPl]){var px=S.stops[sel].pl[placingPl];px.lat=Math.round(e.latlng.lat*1e5)/1e5;px.lon=Math.round(e.latlng.lng*1e5)/1e5;placingPl=null;$('map').classList.remove('pl');save();drawPl();drawMap();msg('„'+px.n+'“ auf der Karte gesetzt.');return}if(!placing||!S.stops[sel])return;var s=S.stops[sel];s.lat=Math.round(e.latlng.lat*1e5)/1e5;s.lon=Math.round(e.latlng.lng*1e5)/1e5;setPl(false);save();all()});
 MAP.on('locationfound',function(e){if(GPS)GPS.remove();GPS=L.circleMarker(e.latlng,{radius:8,color:'#1c8fb5'}).addTo(MAP)});
 MAP.on('locationerror',function(){msg('Standort nicht verfügbar (Freigabe im Browser prüfen).')});
 if(window.ResizeObserver)new ResizeObserver(function(){MAP.invalidateSize()}).observe($('lmap'));
 window.addEventListener('resize',function(){MAP.invalidateSize()})}
-function pinIcon(s,i){var b='';if(MAP.getZoom()>=11&&s.pl&&s.pl.length)b='<span class="pbd">'+s.pl.slice(0,6).map(function(x){return PTI(x.ty)}).join('')+'</span>';
+function pinIcon(s,i){var b='';
 return L.divIcon({className:'lp-wrap',html:'<div class="lp'+(i===sel?' act':'')+'"><b>'+(i+1)+'</b></div><span class="lbl2">'+esc(s.n)+'</span>'+b,iconSize:[30,30],iconAnchor:[15,15]})}
 function drawMap(){
 if(!MAP)return;LAYER.clearLayers();
@@ -234,6 +240,12 @@ var v=S.stops;
 for(var li=1;li<v.length;li++){var A=v[li-1],B=v[li],dd=hav(A,B),fl=dd>500,rd=ROADS?getLeg(A,B):null,rk=rd?rd.d/1000:(fl?dd:dd*1.3),hh=rd?rd.t/3600:(fl?dd/700+2.5:rk/SPD[RG]),mid=rd?rd.c[Math.floor(rd.c.length/2)]:[(A.lat+B.lat)/2,(A.lon+B.lon)/2];
 if(rd)L.polyline(rd.c,{color:'#c4452d',weight:4,opacity:.9}).addTo(LAYER);else L.polyline([ll(A),ll(B)],{color:'#c4452d',weight:3,dashArray:'8 7',opacity:.85}).addTo(LAYER);
 if(MAP.getZoom()>=7)L.marker(mid,{icon:L.divIcon({className:'rl-wrap',html:'<span class="rl2">'+(rd?'🚗 ':fl?'✈️ ':'')+Math.round(rk)+' km · '+ft(hh)+'</span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(LAYER)}
+var nl=0,ok=0,fa=0,lng=0;for(var q=1;q<v.length;q++){var Aq=v[q-1],Bq=v[q],k=legKey(Aq,Bq);if(hav(Aq,Bq)>500){lng++;continue}nl++;if(RTC[k])ok++;else if(FAIL[k])fa++}
+var rs=$('rstat');if(rs)rs.textContent=!ROADS?'Routen: nur Luftlinie (🛣️ ist aus).':'Routen: '+ok+' von '+nl+' Etappen als Straßenroute'+(lng?', '+lng+' Etappe'+(lng>1?'n':'')+' über 500 km als Luftlinie (Flug/Bahn)':'')+(fa?'. '+fa+' Abfrage'+(fa>1?'n':'')+' fehlgeschlagen, dort steht die Luftlinie (Routendienst nicht erreichbar?)':(ok<nl?' (lädt …)':''))+'.';
+if(MAP.getZoom()>=8)v.forEach(function(s,si){(s.pl||[]).forEach(function(x,pi){if(x.lat==null||x.lon==null)return;
+var pm=L.marker([x.lat,x.lon],{icon:L.divIcon({className:'lp-wrap',html:'<div class="pp'+(x.ok?' dn':'')+'">'+PTI(x.ty)+'</div>'+(MAP.getZoom()>=12?'<span class="lbl2 pl2">'+esc(x.n)+'</span>':''),iconSize:[26,26],iconAnchor:[13,13]}),draggable:si===sel,zIndexOffset:500,title:x.n+(x.t?' – '+x.t:'')}).addTo(LAYER);
+pm.on('click',function(){if(si!==sel)pick(si)});
+pm.on('dragend',function(){var p=pm.getLatLng();x.lat=Math.round(p.lat*1e5)/1e5;x.lon=Math.round(p.lng*1e5)/1e5;save();msg('Position von „'+x.n+'“ gespeichert.')})})});
 v.forEach(function(s,i){
 var m=L.marker(ll(s),{icon:pinIcon(s,i),draggable:i===sel,zIndexOffset:i===sel?1000:0,title:s.n}).addTo(LAYER);
 m.on('click',function(){pick(i)});m.on('mouseover',function(){showTip(i)});m.on('mouseout',hideTip);
@@ -372,10 +384,18 @@ var SUG={
 'Matsumoto':[['S','Burg Matsumoto'],['R','Soba in Matsumoto'],['N','Kamikochi Tagesausflug']],
 'Takayama & Shirakawa-go':[['S','Altstadt Sanmachi Suji'],['S','Shirakawa-go Aussichtspunkt Shiroyama'],['R','Hida-Rind probieren']]};
 function plUrl(t,x){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((x.n||'')+' '+t.n+' Japan')}
+var gq=Promise.resolve(),glast=0;
+function geoSearch(t,x,cb,n){var q=(x.n||'')+' '+String(t.n||'').split(' &')[0]+' Japan',url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit='+(n||5)+'&accept-language=de&q='+encodeURIComponent(q)+'&viewbox='+(t.lon-.7)+','+(t.lat+.7)+','+(t.lon+.7)+','+(t.lat-.7);
+gq=gq.then(function(){var w=Math.max(0,1100-(Date.now()-glast));return new Promise(function(r){setTimeout(r,w)})}).then(function(){glast=Date.now();return fetch(url)}).then(function(r){return r.json()}).then(function(j){cb(null,Array.isArray(j)?j:[])}).catch(function(e){cb(e||new Error('x'),[])})}
+function autoGeo(t,x){if(typeof fetch!=='function')return;geoSearch(t,x,function(err,res){if(err){msg('Ortssuche nicht erreichbar. Mit 🔎 oder 📌 später setzen.');return}
+var r=res.filter(function(o){return hav({lat:t.lat,lon:t.lon},{lat:+o.lat,lon:+o.lon})<80})[0];
+if(!r){msg('„'+x.n+'“ nicht gefunden. Mit 🔎 suchen oder mit 📌 auf der Karte setzen.');return}
+x.lat=Math.round(+r.lat*1e5)/1e5;x.lon=Math.round(+r.lon*1e5)/1e5;save();if(S.stops[sel]===t){drawPl();drawMap()}msg('„'+x.n+'“ auf der Karte gefunden. Falsch? Pin ziehen oder mit 🔎 anderen Treffer wählen.')},1)}
+function shortName(o){return String(o.display_name||'').split(',').slice(0,3).join(',')}
 function drawPl(){var t=S.stops[sel],b=$('plw');if(!b||!t)return;if(!t.pl)t.pl=[];
 b.innerHTML='<details open><summary>📍 Orte und Tipps ('+t.pl.length+')</summary><div id="plb"></div></details>';
 var opts=function(c){return PT.map(function(o){return '<option value="'+o[0]+'"'+(o[0]==c?' selected':'')+'>'+o[1]+' '+o[2]+'</option>'}).join('')};
-var h='';t.pl.forEach(function(x,i){h+='<div class="pr'+(x.ok?' dn':'')+'"><select class="ps" data-i="'+i+'">'+opts(x.ty)+'</select><input class="pn" data-i="'+i+'" placeholder="Name" value="'+esc(x.n)+'"><input class="pt" data-i="'+i+'" placeholder="Notiz (Zeit, Preis, Reservierung …)" value="'+esc(x.t||'')+'"><a class="btn pm" target="_blank" rel="noopener" href="'+plUrl(t,x)+'" title="In Google Maps öffnen">🗺️</a><label class="pk" title="Erledigt oder gebucht"><input type="checkbox" class="pc" data-i="'+i+'"'+(x.ok?' checked':'')+'> ✓</label><b class="x" data-i="'+i+'">×</b></div>'});
+var h='';t.pl.forEach(function(x,i){h+='<div class="pr'+(x.ok?' dn':'')+'"><select class="ps" data-i="'+i+'">'+opts(x.ty)+'</select><input class="pn" data-i="'+i+'" placeholder="Name" value="'+esc(x.n)+'"><input class="pt" data-i="'+i+'" placeholder="Notiz (Zeit, Preis, Reservierung …)" value="'+esc(x.t||'')+'"><a class="btn pm" target="_blank" rel="noopener" href="'+plUrl(t,x)+'" title="In Google Maps öffnen">🗺️</a><button class="gb ge" data-i="'+i+'" title="Ort suchen und auf der Karte setzen">🔎</button><button class="gb gp" data-i="'+i+'" title="Per Klick auf der Karte setzen">📌</button>'+(x.lat!=null?'<button class="gb gz" data-i="'+i+'" title="Auf der Karte zeigen">🎯</button>':'<span class="hint" title="Noch keine Position">❔</span>')+'<label class="pk" title="Erledigt oder gebucht"><input type="checkbox" class="pc" data-i="'+i+'"'+(x.ok?' checked':'')+'> ✓</label><b class="x" data-i="'+i+'">×</b></div>'});
 h+='<div class="pr"><select id="pty">'+opts('R')+'</select><input id="pnn" placeholder="Neuer Ort, z. B. Ichiran Ramen"><button id="pad">+ Hinzufügen</button></div>';
 var sg=(SUG[t.n]||[]).filter(function(g){return !t.pl.some(function(x){return x.n==g[1]})});
 if(sg.length)h+='<div class="hint">Vorschläge zum Übernehmen:</div><div class="chips">'+sg.map(function(g,k){return '<button class="sgb" data-k="'+k+'">+ '+PTI(g[0])+' '+esc(g[1])+'</button>'}).join('')+'</div>';
@@ -386,7 +406,11 @@ pb.querySelectorAll('.pn').forEach(function(e){e.oninput=function(){var x=t.pl[+
 pb.querySelectorAll('.pt').forEach(function(e){e.oninput=function(){t.pl[+e.dataset.i].t=e.value;saveSoon()}});
 pb.querySelectorAll('.pc').forEach(function(e){e.onchange=function(){t.pl[+e.dataset.i].ok=e.checked?1:0;ref()}});
 pb.querySelectorAll('.x').forEach(function(e){e.onclick=function(){t.pl.splice(+e.dataset.i,1);ref()}});
-function add(ty,n){if(!n)return;t.pl.push({ty:ty,n:n,t:'',ok:0});ref()}
+function add(ty,n){if(!n)return;var np={ty:ty,n:n,t:'',ok:0};t.pl.push(np);ref();autoGeo(t,np)}
+pb.querySelectorAll('.gz').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i];if(MAP&&x.lat!=null)MAP.flyTo([x.lat,x.lon],15,{duration:.8})}});
+pb.querySelectorAll('.gp').forEach(function(e){e.onclick=function(){placingPl=+e.dataset.i;setPl(false);$('map').classList.add('pl');msg('Tippe auf die Karte, um „'+t.pl[placingPl].n+'“ zu setzen.')}});
+pb.querySelectorAll('.ge').forEach(function(e){e.onclick=function(){var x=t.pl[+e.dataset.i],row=e.parentNode,old=row.nextSibling;if(old&&old.className=='geo'){old.remove();return}var box=document.createElement('div');box.className='geo';box.textContent='Suche …';row.after(box);
+geoSearch(t,x,function(err,res){if(err){box.textContent='Ortssuche nicht erreichbar. Mit 📌 auf der Karte setzen.';return}if(!res.length){box.textContent='Nichts gefunden. Name ändern (z. B. mit Stadtteil) oder mit 📌 auf der Karte setzen.';return}box.innerHTML='Treffer wählen:';res.forEach(function(o){var b=document.createElement('button');b.textContent=shortName(o);b.onclick=function(){x.lat=Math.round(+o.lat*1e5)/1e5;x.lon=Math.round(+o.lon*1e5)/1e5;save();drawPl();drawMap();if(MAP)MAP.flyTo([x.lat,x.lon],15,{duration:.8})};box.appendChild(b)})},5)}});
 $('pad').onclick=function(){add($('pty').value,$('pnn').value.trim())};
 $('pnn').onkeydown=function(e){if(e.key=='Enter'){e.preventDefault();$('pad').click()}};
 pb.querySelectorAll('.sgb').forEach(function(e){e.onclick=function(){var g=sg[+e.dataset.k];add(g[0],g[1])}})}

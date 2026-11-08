@@ -1,5 +1,5 @@
 // Service Worker: App offline verfügbar machen, Kartenkacheln beim Ansehen merken
-const V = 'japan-planer-v2';
+const V = 'japan-planer-v3';
 const TILES = 'japan-tiles-v1';
 const LEAF = 'https://unpkg.com/leaflet@1.9.4/dist/';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png', LEAF + 'leaflet.css', LEAF + 'leaflet.js'];
@@ -28,7 +28,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (r.mode === 'navigate') {
-    e.respondWith(fetch(r).then(res => { const cp = res.clone(); caches.open(V).then(c => c.put('index.html', cp)); return res; }).catch(() => caches.match('index.html')));
+    e.respondWith(fetch(r, { cache: 'no-cache' }).then(res => { const cp = res.clone(); caches.open(V).then(c => c.put('index.html', cp)); return res; }).catch(() => caches.match('index.html')));
     return;
   }
   e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => { if (res.ok && (u.origin === location.origin || u.hostname === 'unpkg.com')) { const cp = res.clone(); caches.open(V).then(c => c.put(r, cp)); } return res; })));
